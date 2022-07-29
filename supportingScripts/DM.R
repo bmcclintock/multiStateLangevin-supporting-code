@@ -76,7 +76,7 @@ inputUD[[4]] <- list(nbUD=1,parIndex=list(2:6),covNames=list(c("depth","slope","
 
 ##### 3 state models #####
 
-modelName[[5]] <- "S=3 sigma(ID,1=2) beta(depth*slope+d2site^2) dry(1=2) gamma(d2site)"
+modelName[[5]] <- "S=3 sigma(ID,1=2) beta(depth*slope+d2site^2) p(1=2) gamma(d2site)"
 nbStates[[5]] <- 3
 DM[[5]] <- list(mu=matrix(c("mu.x_tm1","langevin(depth.x)","langevin(slope.x)","langevin(depthslope.x)","langevin(d2site.x)","langevin(d2site2.x)",                 0,                  0,                       0,                   0,                    0,        0,        0,        0,0,0,
                                "mu.x_tm1",                  0,                  0,                       0,                   0,                   0,"langevin(depth.x)","langevin(slope.x)","langevin(depthslope.x)","langevin(d2site.x)","langevin(d2site2.x)",        0,        0,        0,0,0,
@@ -155,7 +155,7 @@ DM4 <- list(mu=matrix(c( "mu.x_tm1","langevin(depth.x)","langevin(slope.x)","lan
                                 0,1,0),4,3,byrow=TRUE))
 
 # "outbound", "foraging1", and "inbound" have same speed; "outbound" and "inbound" have opposite potential surfaces
-modelName[[7]] <- "S=4 sigma(ID,1=2=3) beta(depth*slope+d2site^2,1=-3) dry(1=2=3) gamma(d2site)"
+modelName[[7]] <- "S=4 sigma(ID,1=2=3) beta(depth*slope+d2site^2,1=-3) p(1=2=3) gamma(d2site)"
 nbStates[[7]] <- 4
 DM[[7]] <- DM4
 DM[[7]]$mu <- DM4$mu[,-c(11:16,18,20,22)]
@@ -167,12 +167,12 @@ userBounds[[7]] <- list(dry=matrix(c(0,0.5,
                                  0,0.5,
                                  0.5,1),ncol=2,byrow=TRUE))
 fixPar[[7]] <- getFixPar(DM[[7]])
-maxRate[[7]] <- Inf
+maxRate[[7]] <- 1.e+5
 stateNames[[7]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[7]] <- list(nbUD=3,parIndex=list(2:6,7:10,2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,-1))
 
 # allow "foraging1" state to have own speed
-modelName[[8]] <- "S=4 sigma(ID,1=3) beta(depth*slope+d2site^2,1=-3) dry(1=3) gamma(d2site)"
+modelName[[8]] <- "S=4 sigma(ID,1=3) beta(depth*slope+d2site^2,1=-3) p(1=3) gamma(d2site)"
 nbStates[[8]] <- 4
 DM[[8]] <- DM[[7]]
 DM[[8]]$mu <- cbind(DM[[7]]$mu[,1:10],DM4$mu[,-c(1:11,12:16)])
@@ -183,12 +183,12 @@ userBounds[[8]] <- list(dry=matrix(c(0,0.5,
                                      0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
 fixPar[[8]] <- getFixPar(DM[[8]])
-maxRate[[8]] <- Inf
+maxRate[[8]] <- 1.e+5
 stateNames[[8]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[8]] <- list(nbUD=3,parIndex=list(2:6,7:10,2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,-1))
 
 # "outbound", "foraging1", and "inbound" have same speed but each state has own potential surface
-modelName[[9]] <- "S=4 sigma(ID,1=2=3) beta(depth*slope+d2site^2) dry(1=2=3) gamma(d2site)"
+modelName[[9]] <- "S=4 sigma(ID,1=2=3) beta(depth*slope+d2site^2) p(1=2=3) gamma(d2site)"
 nbStates[[9]] <- 4
 DM[[9]] <- DM4
 DM[[9]]$mu <- DM4$mu[,-c(11,18,20,22)]
@@ -199,12 +199,12 @@ userBounds[[9]] <- list(dry=matrix(c(0,0.5,
                                      0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
 fixPar[[9]] <- getFixPar(DM[[9]])
-maxRate[[9]] <- Inf
+maxRate[[9]] <- 1.e+5
 stateNames[[9]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[9]] <- list(nbUD=3,parIndex=list(2:6,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,1))
 
 # allow "foraging1" state to have own speed, "outbound" and "inbound" have own potential surfaces
-modelName[[10]] <- "S=4 sigma(ID,1=3) beta(depth*slope+d2site^2) dry(1=3) gamma(d2site)"
+modelName[[10]] <- "S=4 sigma(ID,1=3) beta(depth*slope+d2site^2) p(1=3) gamma(d2site)"
 nbStates[[10]] <- 4
 DM[[10]] <- DM4
 DM[[10]]$mu <- DM4$mu[,-11]
@@ -214,7 +214,7 @@ userBounds[[10]] <- list(dry=matrix(c(0,0.5,
                                       0,0.5,
                                       0.5,1),ncol=2,byrow=TRUE))
 fixPar[[10]] <- getFixPar(DM[[10]])
-maxRate[[10]] <- Inf
+maxRate[[10]] <- 1.e+5
 stateNames[[10]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[10]] <- list(nbUD=3,parIndex=list(2:6,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,1))
 
@@ -273,7 +273,7 @@ DM5 <- list(mu=matrix(c( "mu.x_tm1","langevin(depth.x)","langevin(slope.x)","lan
                                     0,1,0),5,3,byrow=TRUE))
 
 # 5 state model where two "foraging" states share same potential surface
-modelName[[12]] <- "S=5 sigma(ID,1=3=4) beta(depth*slope+d2site^2,2=3) dry(1=3=4) gamma(d2site)"
+modelName[[12]] <- "S=5 sigma(ID,1=3=4) beta(depth*slope+d2site^2,2=3) p(1=3=4) gamma(d2site)"
 nbStates[[12]] <- 5
 DM[[12]] <- DM5
 DM[[12]]$mu <- DM5$mu[,-11]
@@ -289,7 +289,7 @@ stateNames[[12]] <- c("outbound","foraging1","foraging2","inbound","haulout")
 inputUD[[12]] <- list(nbUD=4,parIndex=list(2:6,7:10,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging1","foraging2","inbound"),UDstates=list(1,2,3,4),sign=c(1,1,1,1))
 
 # two "foraging" states have own speeds
-modelName[[13]] <- "S=5 sigma(ID,1=4) beta(depth*slope+d2site^2,2=3) dry(1=4) gamma(d2site)"
+modelName[[13]] <- "S=5 sigma(ID,1=4) beta(depth*slope+d2site^2,2=3) p(1=4) gamma(d2site)"
 nbStates[[13]] <- 5
 DM[[13]] <- DM[[12]] 
 DM[[13]]$mu <- cbind(DM[[12]]$mu[,1:17],c(rep(0,10),0,0,"ID35224",0,1,rep(0,5),0,0,"ID35224",0,1),
@@ -310,7 +310,7 @@ stateNames[[13]] <- c("outbound","foraging1","foraging2","inbound","haulout")
 inputUD[[13]] <- list(nbUD=4,parIndex=list(2:6,7:10,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging1","foraging2","inbound"),UDstates=list(1,2,3,4),sign=c(1,1,1,1))
 
 # two "foraging" states have own potential surface
-modelName[[14]] <- "S=5 sigma(ID,1=3=4) beta(depth*slope+d2site^2) dry(1=3=4) gamma(d2site)"
+modelName[[14]] <- "S=5 sigma(ID,1=3=4) beta(depth*slope+d2site^2) p(1=3=4) gamma(d2site)"
 nbStates[[14]] <- 5
 DM[[14]] <- DM[[12]]
 DM[[14]]$mu <- cbind(DM[[12]]$mu[,c(1:6,7:10,7:10,11:18)],

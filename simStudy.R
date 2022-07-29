@@ -49,21 +49,21 @@ for(isim in 1:nsims){
   #######################
   ## Define covariates ##
   #######################
-  # Generate ncov random covariates
+  # Generate ncov spatial covariates
   covlist[[isim]] <- list()
   for(i in 1:ncov) {
     covlist[[isim]][[i]] <- Rhabit::simSpatialCov(lim = lim, nu = 0.6, rho = 50, sigma2 = 0.1, 
                                           resol = resol, raster_like = TRUE)
   }
   
-  # Include squared distance to centre of map as covariate
+  # Include squared distance to origin as covariate
   xgrid <- seq(lim[1], lim[2], by=resol)
   ygrid <- seq(lim[3], lim[4], by=resol)
   xygrid <- expand.grid(xgrid,ygrid)
   dist2 <- ((xygrid[,1])^2+(xygrid[,2])^2)/100
   covlist[[isim]][[4]] <- list(x=xgrid, y=ygrid, z=matrix(dist2, length(xgrid), length(ygrid)))
   
-  # Compute utilisation distribution for states 1 and 2
+  # Compute utilization distribution for states 1 and 2
   UD1 <- Rhabit::getUD(covariates=covlist[[isim]], beta=beta1,log=TRUE)
   UD2 <- Rhabit::getUD(covariates=covlist[[isim]], beta=beta2,log=TRUE)
   

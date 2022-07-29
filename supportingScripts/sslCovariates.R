@@ -44,7 +44,7 @@ getCovariates <- function(extent=c(-2499.76, -999.6641, -0.09183017, 999.9718)){
   }
   
   # rescale depth
-  absmin <- abs(min(values(covlist$depth),na.rm=TRUE))
+  absmin <- abs(min(getValues(covlist$depth),na.rm=TRUE))
   covlist$depth <- covlist$depth+absmin
   covlist[["depthslope"]] <- covlist$depth * covlist$slope
   attr(covlist$depth,"absmin") <- absmin

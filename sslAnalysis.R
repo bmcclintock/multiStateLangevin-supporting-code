@@ -20,13 +20,13 @@ if(!requireNamespace("momentuHMM",quietly=TRUE) || packageVersion("momentuHMM")<
 }
 library(momentuHMM)
 
-source("sslCovariates.R")
+source("supportingScripts/sslCovariates.R")
 covlist <- getCovariates() # takes a while and a bit of memory, so covlist can be loaded with "sslCovs.RData"
 #load("data/sslCovs.RData")
 load("data/tracks.RData") # load the tracks
 load("data/Par0.RData") # initial parameter values for optimization
 
-source("utility.R") # utility functions
+source("supportingScripts/utility.R") # utility functions
 
 # standardize covariate rasters based on observations
 covlist0 <- list()
@@ -44,7 +44,7 @@ tracks <- prepData(tracks,coordNames=c("mu.x","mu.y"),altCoordNames = "mu",spati
 # define data stream distribution
 dist <- list(mu="rw_mvnorm2",dry="bern")
 
-source("DM.R") # pseudo-design matrix definitions for each model
+source("supportingScripts/DM.R") # pseudo-design matrix definitions for each model
 
 fitLangevin <- UD <- list()
 
@@ -119,7 +119,7 @@ dev.off()
 # compare simulated tracks from models 2, 9, and 14
 sim <- expandUD <- list()
 initPos <- mapply(function(x) c(tracks[which(tracks$ID==x)[1],c("mu.x")],tracks[which(tracks$ID==x)[1],c("mu.y")]),unique(tracks$ID),SIMPLIFY = FALSE)
-set.seed(9297279,kind="Mersenne-Twister",normal.kind = "Inversion")
+set.seed(69246,kind="Mersenne-Twister",normal.kind = "Inversion")
 for(i in c(2,9,14)){
   message("\n",modelName[[i]])
   sim[[i]] <- simCTHMM(model=fitLangevin[[i]],spatialCovs=covlist0,initialPosition=initPos,states=TRUE,retrySims=5)
@@ -130,10 +130,10 @@ slim <- apply(rbind(tracks[,c("mu.x","mu.y")],dplyr::bind_rows(sim)[,c("mu.x","m
 land <- (covlist0$depth*sd(covlist$depth[cellInd])+mean(covlist$depth[cellInd])-attr(covlist$depth,"absmin"))>=0
 
 cextheme <- theme(legend.text = element_text(size = rel(1.15)),legend.title=element_text(size=rel(1.35)),axis.title=element_text(size = rel(1.25)),axis.text=element_text(size = rel(1.15)))
-p1<-plotSpatialCov(tracks,crop(land,slim),colors=gray.colors(10, start = 1, end = 0.4, gamma = 2.2, alpha = NULL),col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y="mu.y")+guides(fill = "none")+theme(panel.border = element_blank())+cextheme
-p2<-plotSpatialCov(sim[[2]],crop(expandUD[[2]]$outbound,slim),colors=viridis_pal()(100),col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("1 State")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme
-p3<-plotSpatialCov(sim[[9]],crop(expandUD[[9]]$foraging,slim),colors=viridis_pal()(100),col=stateCols[[4]],return=TRUE)+ggplot2::labs(x="mu.x",y="mu.y")+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("4 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme
-p4<-plotSpatialCov(sim[[14]],crop(expandUD[[14]]$foraging2,slim),colors=viridis_pal()(100),col=stateCols[[4]],return=TRUE)+ggplot2::labs(x="mu.x",y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("5 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme
+p1<-plotSpatialCov(tracks,crop(land,slim),colors=gray.colors(10, start = 1, end = 0.4, gamma = 2.2, alpha = NULL),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y="mu.y")+guides(fill = "none")+theme(panel.border = element_blank())+cextheme
+p2<-plotSpatialCov(sim[[2]],crop(expandUD[[2]]$outbound,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("1 State")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme
+p3<-plotSpatialCov(sim[[9]],crop(expandUD[[9]]$foraging,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(x="mu.x",y="mu.y")+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("4 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme
+p4<-plotSpatialCov(sim[[14]],crop(expandUD[[14]]$foraging2,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(x="mu.x",y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("5 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme
 pdf("simTracks.pdf",width=14,height=14)
 plot(p1 + p2 + p3 + p4 + plot_layout(ncol = 2, nrow=2) )
 dev.off()
