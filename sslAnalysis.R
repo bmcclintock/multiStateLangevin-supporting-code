@@ -66,16 +66,16 @@ for(i in 1:length(DM)){
                                beta0=Par[[i]]$beta,
                                formula=formula[[i]],
                                fixPar=fixPar[[i]],
+                               prior=prior[[i]],
                                userBounds=userBounds[[i]],
                                workBounds=workBounds[[i]],
                                mvnCoords = "mu",
-                               nlmPar=list(print.level=2),stateNames=stateNames[[i]],modelName=modelName[[i]],maxRate=maxRate[[i]])
+                               nlmPar=list(print.level=2),stateNames=stateNames[[i]],modelName=modelName[[i]],kappa=kappa[[i]])
   UD[[i]] <- plotUD(inputUD[[i]]$nbUD,inputUD[[i]]$parIndex,inputUD[[i]]$covNames,model=fitLangevin[[i]],inputUD[[i]]$UDnames,inputUD[[i]]$UDstates,inputUD[[i]]$sign,return=TRUE)
 }
 
 # AIC excluding models with better fit but intermediary "foraging" state
-AIC(fitLangevinOrig,!!!fitLangevin[c(1:5,7,9,12,14)])
-AICweights(fitLangevinOrig,!!!fitLangevin[c(1:5,7,9,12,14)])
+penAIC(append(list(fitLangevinOrig),fitLangevin[c(1:5,7,9,12,14)]))
 
 pdf("4stateUD.pdf",width=20,height=14)
 statePlot(fitLangevin[[9]],UD[[9]])
@@ -119,9 +119,9 @@ dev.off()
 # compare simulated tracks from models 2, 9, and 14
 sim <- expandUD <- list()
 initPos <- mapply(function(x) c(tracks[which(tracks$ID==x)[1],c("mu.x")],tracks[which(tracks$ID==x)[1],c("mu.y")]),unique(tracks$ID),SIMPLIFY = FALSE)
-set.seed(69246,kind="Mersenne-Twister",normal.kind = "Inversion")
 for(i in c(2,9,14)){
   message("\n",modelName[[i]])
+  set.seed(118018,kind="Mersenne-Twister",normal.kind = "Inversion")
   sim[[i]] <- simCTHMM(model=fitLangevin[[i]],spatialCovs=covlist0,initialPosition=initPos,states=TRUE,retrySims=5)
   expandUD[[i]] <- plotUD(inputUD[[i]]$nbUD,inputUD[[i]]$parIndex,inputUD[[i]]$covNames,model=fitLangevin[[i]],inputUD[[i]]$UDnames,inputUD[[i]]$UDstates,inputUD[[i]]$sign,cropRast=FALSE,return=TRUE)
 }

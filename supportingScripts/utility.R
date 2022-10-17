@@ -47,8 +47,46 @@ getFixPar <- function(DM){
     fixPar$beta <- matrix(NA,2,nbStates*(nbStates-1))
     fixPar$beta[,nbStates-1] <- c(-1.e+10,0)
     fixPar$beta[,nbStates*(nbStates-1)] <- c(-1.e+10,0)
+    fixPar$beta[2,nbStates*(nbStates-1)-(nbStates-2):1] <- 0
   }
   return(fixPar)
+}
+
+getPrior <- function(beta,DM,sd=10){
+  if(!is.null(beta)){
+    parInd <- paste0(which(is.na(beta)),collapse=",")
+    nPar <- sum(unlist(lapply(DM,function(x) ncol(x))))
+    return(eval(parse(text=paste0("prior <- function(par) sum(-(par[",nPar,"+c(",parInd,")]^2/(2*",sd^2,")))"))))
+  } else return()
+}
+
+penAIC <- function(models,sampleSize=3,penalty=1/2*100^(-1)){
+  paic <- aic <- nll <- logpenalty <- nbPar <- numeric(length(models))
+  modelName <- unlist(lapply(models,function(x) x$modelName))
+  d <- penalty/sampleSize
+  for(i in 1:length(models)){
+    nPar <- sum(unlist(lapply(models[[i]]$conditions$DM,function(x) ncol(x))))
+    parInd <- nPar+which(is.na(models[[i]]$conditions$fixPar$beta))
+    F <- matrix(0,length(models[[i]]$mod$estimate),length(models[[i]]$mod$estimate))
+    F[parInd,parInd] <- diag(length(parInd))
+    R <- F %*% t(F)
+    q <- Matrix::rankMatrix(R)
+    I <- models[[i]]$mod$Sigma
+    Tmat <- t(F) %*% I %*% F
+    T <- eigen(Tmat)$values[1:q]
+    logpenalty[i] <- ifelse(is.null(models[[i]]$prior),0,models[[i]]$prior(models[[i]]$mod$estimate))
+    nll[i] <- models[[i]]$mod$minimum + logpenalty[i]
+    maxLogLike <- -nll[i]
+    nbPar[i] <- length(models[[i]]$mod$wpar)
+    paic[i] <- -2*maxLogLike + 2*(nbPar[i] - sum(2*d*T / (1+2*d*T)))
+    aic[i] <- -2*maxLogLike + 2*nbPar[i]
+  }
+  ord <- order(aic)
+  weight <- exp(-0.5*(aic[ord]-min(aic)))/sum(exp(-0.5*(aic[ord]-min(aic))))
+  delta <- aic[ord]-min(aic)
+  pweight <- exp(-0.5*(paic[ord]-min(paic)))/sum(exp(-0.5*(paic[ord]-min(paic))))
+  pdelta <- paic[ord]-min(paic)
+  return(data.frame(Model=modelName[ord],AIC=aic[ord],Weight=weight,deltaAIC=delta,pAIC=paic[ord],pWeight=pweight,deltapAIC=pdelta,NLL=nll[ord],Penalty=logpenalty[ord],K=nbPar[ord]))
 }
 
 # plot mu pseudo-residuals
@@ -212,11 +250,8 @@ statPlot <- function(model,distQuantile=0.99){
 sojournTimePlot <- function(model){
   
   par(mfrow=c(1,1))
-  Qmat <- list()
   d2site <- seq(min(model$data$d2site),max(model$data$d2site),length=250)
-  for(i in 1:length(d2site)){
-    Qmat[[i]] <- CIreal(model,covs=data.frame(d2site=d2site[i]),parms="Q")$Q$est
-  }
+  Qmat <- getTrProbs(data.frame(ID=1,time=1:length(d2site),d2site=d2site),nbStates=length(model$stateNames),Time.name="time",beta=model$CIbeta$beta$est,workBounds=model$conditions$workBounds["beta"],formula=model$conditions$formula,betaRef=model$conditions$betaRef,stateNames=model$stateNames,rateMatrix=TRUE,kappa=model$conditions$kappa)
   
   d2mean <- mean(covlist$d2site[cellInd])
   d2sd <- sd(covlist$d2site[cellInd])
@@ -228,9 +263,8 @@ sojournTimePlot <- function(model){
   std2site <- model$data$d2site[which(st==1)] * d2sd+d2mean
   counts <- hist(std2site,breaks=d2site,plot=FALSE,right=FALSE)$counts
   ind <- which(d2site<=max(std2site) & d2site>=min(std2site))
-  ylim <- range(mapply(function(x) -1/unlist(lapply(Qmat,function(y) y[x,x])),1:nbStates))
-  plot(d2site[ind],-1/unlist(lapply(Qmat,function(x) x[1,1]))[ind],type="l",col=alpha(1,0),xlim=range(d2site),ylim=ylim,xlab="d2site",ylab=expression(1/q[ii]),main=model$modelName)
-  points(model$data$d2site * d2sd+d2mean,model$data$dt,col=alpha(cols[st],0.3),pch=20,cex=0.3)
+  ylim <- range(mapply(function(x) -1/apply(Qmat,3,function(y) y[x,x]),1:nbStates))
+  plot(d2site[ind],-1/apply(Qmat,3,function(x) x[1,1])[ind],type="l",col=alpha(1,0),xlim=range(d2site),ylim=ylim,xlab="d2site",ylab=expression(1/q[ii]),main=model$modelName)
   for(i in 1:nbStates){
     message(paste0("State ",i," delta_t summary:"))
     print(summary(model$data$dt[which(st==i)]))
@@ -238,7 +272,7 @@ sojournTimePlot <- function(model){
     std2site <- model$data$d2site[which(st==i)] * d2sd+d2mean
     counts <- hist(std2site,breaks=d2site,plot=FALSE,right=FALSE)$counts
     ind <- which(d2site<=max(std2site) & d2site>=min(std2site))
-    stQmat <- -1/unlist(lapply(Qmat,function(x) x[i,i]))[ind]
+    stQmat <- -1/apply(Qmat,3,function(x) x[i,i])[ind]
     message(paste0("State ",i," d2site summary:"))
     print(summary(std2site))
     stdt <- model$data$dt[which(st==i)]
@@ -248,6 +282,7 @@ sojournTimePlot <- function(model){
     points(sort(std2site),predict(reg)[order(std2site)],col=cols[i],lty=2,lwd=1.5,type="l")
     #abline(h=median(stdt),lty=i+1,col=cols[i],lwd=1.5)
   }
+  points(model$data$d2site * d2sd+d2mean,model$data$dt,col=alpha(cols[st],0.3),pch=20,cex=0.3)
   legend(250,ylim[2]*4/5,legend=model$stateNames,col=cols,lty=1,lwd=2)
   
 }

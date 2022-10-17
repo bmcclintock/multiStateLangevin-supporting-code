@@ -1,4 +1,4 @@
-modelName <- nbStates <- DM <- formula <- userBounds <- stateNames <- inputUD <- fixPar <- maxRate <- list()
+modelName <- nbStates <- DM <- formula <- userBounds <- stateNames <- inputUD <- fixPar <- kappa <- list()
 
 ##### 1 state models #####
 
@@ -15,7 +15,7 @@ DM[[1]] <- list(mu= matrix(c("mu.x_tm1","langevin(depth.x)","langevin(slope.x)",
 formula[[1]] <- ~1
 userBounds[[1]] <- list(dry=matrix(c(0,0.5),1,2))
 fixPar[[1]] <- getFixPar(DM[[1]])
-maxRate[[1]] <- Inf
+kappa[[1]] <- Inf
 stateNames[[1]] <- "outbound"
 inputUD[[1]] <- list(nbUD=1,parIndex=list(2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2")),UDnames="outbound",UDstates=list(1),sign=list(1))
 
@@ -31,7 +31,7 @@ colnames(DM[[2]]$mu)[7:9] <- paste0("sigma:(outbound)",c("ID35224","ID61080","ID
 formula[[2]] <- ~1
 userBounds[[2]] <- list(dry=matrix(c(0,0.5),1,2))
 fixPar[[2]] <- getFixPar(DM[[2]])
-maxRate[[2]] <- Inf
+kappa[[2]] <- Inf
 stateNames[[2]] <- "outbound"
 inputUD[[2]] <- list(nbUD=1,parIndex=list(2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2")),UDnames="outbound",UDstates=list(1),sign=list(1))
 
@@ -56,7 +56,7 @@ formula[[3]] <- ~state1(d2site)
 userBounds[[3]] <- list(dry=matrix(c(0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
 fixPar[[3]] <- getFixPar(DM[[3]])
-maxRate[[3]] <- Inf
+kappa[[3]] <- 4
 stateNames[[3]] <- c("outbound","haulout")
 inputUD[[3]] <- list(nbUD=1,parIndex=list(2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2")),UDnames="outbound",UDstates=list(1),sign=list(1))
 
@@ -70,7 +70,7 @@ formula[[4]] <- ~state1(d2site)
 userBounds[[4]] <- list(dry=matrix(c(0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
 fixPar[[4]] <- getFixPar(DM[[4]])
-maxRate[[4]] <- Inf
+kappa[[4]] <- 4
 stateNames[[4]] <- c("outbound","haulout")
 inputUD[[4]] <- list(nbUD=1,parIndex=list(2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2")),UDnames="outbound",UDstates=list(1),sign=list(1))
 
@@ -102,7 +102,7 @@ userBounds[[5]] <- list(dry=matrix(c(0,0.5,
                                  0,0.5,
                                  0.5,1),ncol=2,byrow=TRUE))
 fixPar[[5]] <- getFixPar(DM[[5]])
-maxRate[[5]] <- Inf
+kappa[[5]] <- 4
 stateNames[[5]] <- c("outbound","inbound","haulout")
 inputUD[[5]] <- list(nbUD=2,parIndex=list(2:6,7:11),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","inbound"),UDstates=list(1,2),sign=list(1,1))
 
@@ -120,8 +120,10 @@ formula[[6]] <- ~state1(d2site)+state2(d2site)
 userBounds[[6]] <- list(dry=matrix(c(0,0.5,
                                      0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
-fixPar[[6]] <- getFixPar(DM[[6]])[c("mu","delta")]
-maxRate[[6]] <- Inf
+fixPar[[6]] <- getFixPar(DM[[6]])
+fixPar[[6]]$beta[,nbStates[[6]]-1] <- NA
+fixPar[[6]]$beta[1,nbStates[[6]]*(nbStates[[6]]-1)] <- NA
+kappa[[6]] <- 4
 stateNames[[6]] <- c("outbound","inbound","haulout")
 inputUD[[6]] <- list(nbUD=2,parIndex=list(2:6,7:11),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","inbound"),UDstates=list(1,2),sign=list(1,1))
 
@@ -167,7 +169,7 @@ userBounds[[7]] <- list(dry=matrix(c(0,0.5,
                                  0,0.5,
                                  0.5,1),ncol=2,byrow=TRUE))
 fixPar[[7]] <- getFixPar(DM[[7]])
-maxRate[[7]] <- 1.e+5
+kappa[[7]] <- 4
 stateNames[[7]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[7]] <- list(nbUD=3,parIndex=list(2:6,7:10,2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,-1))
 
@@ -183,7 +185,7 @@ userBounds[[8]] <- list(dry=matrix(c(0,0.5,
                                      0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
 fixPar[[8]] <- getFixPar(DM[[8]])
-maxRate[[8]] <- 1.e+5
+kappa[[8]] <- 4
 stateNames[[8]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[8]] <- list(nbUD=3,parIndex=list(2:6,7:10,2:6),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,-1))
 
@@ -199,7 +201,7 @@ userBounds[[9]] <- list(dry=matrix(c(0,0.5,
                                      0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
 fixPar[[9]] <- getFixPar(DM[[9]])
-maxRate[[9]] <- 1.e+5
+kappa[[9]] <- 4
 stateNames[[9]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[9]] <- list(nbUD=3,parIndex=list(2:6,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,1))
 
@@ -214,7 +216,7 @@ userBounds[[10]] <- list(dry=matrix(c(0,0.5,
                                       0,0.5,
                                       0.5,1),ncol=2,byrow=TRUE))
 fixPar[[10]] <- getFixPar(DM[[10]])
-maxRate[[10]] <- 1.e+5
+kappa[[10]] <- 4
 stateNames[[10]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[10]] <- list(nbUD=3,parIndex=list(2:6,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,1))
 
@@ -233,8 +235,10 @@ userBounds[[11]] <- list(dry=matrix(c(0,0.5,
                                      0,0.5,
                                      0,0.5,
                                      0.5,1),ncol=2,byrow=TRUE))
-fixPar[[11]] <- getFixPar(DM[[11]])[c("mu","delta")]
-maxRate[[11]] <- 1.e+5
+fixPar[[11]] <- getFixPar(DM[[11]])
+fixPar[[11]]$beta[,nbStates[[11]]-1] <- NA
+fixPar[[11]]$beta[1,nbStates[[11]]*(nbStates[[11]]-1)] <- NA
+kappa[[11]] <- 4
 stateNames[[11]] <- c("outbound","foraging","inbound","haulout")
 inputUD[[11]] <- list(nbUD=3,parIndex=list(2:6,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging","inbound"),UDstates=list(1,2,3),sign=list(1,1,1))
 
@@ -284,7 +288,7 @@ userBounds[[12]] <- list(dry=matrix(c(0,0.5,
                                       0,0.5,
                                       0.5,1),ncol=2,byrow=TRUE))
 fixPar[[12]] <- getFixPar(DM[[12]])
-maxRate[[12]] <- 1.e+5
+kappa[[12]] <- 4
 stateNames[[12]] <- c("outbound","foraging1","foraging2","inbound","haulout")
 inputUD[[12]] <- list(nbUD=4,parIndex=list(2:6,7:10,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging1","foraging2","inbound"),UDstates=list(1,2,3,4),sign=c(1,1,1,1))
 
@@ -305,7 +309,7 @@ userBounds[[13]] <- list(dry=matrix(c(0,0.5,
                                       0,0.5,
                                       0.5,1),ncol=2,byrow=TRUE))
 fixPar[[13]] <- getFixPar(DM[[13]])
-maxRate[[13]] <- 1.e+5
+kappa[[13]] <- 4
 stateNames[[13]] <- c("outbound","foraging1","foraging2","inbound","haulout")
 inputUD[[13]] <- list(nbUD=4,parIndex=list(2:6,7:10,7:10,11:15),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging1","foraging2","inbound"),UDstates=list(1,2,3,4),sign=c(1,1,1,1))
 
@@ -325,7 +329,7 @@ userBounds[[14]] <- list(dry=matrix(c(0,0.5,
                                       0,0.5,
                                       0.5,1),ncol=2,byrow=TRUE))
 fixPar[[14]] <- getFixPar(DM[[14]])
-maxRate[[14]] <- 1.e+5
+kappa[[14]] <- 4
 stateNames[[14]] <- c("outbound","foraging1","foraging2","inbound","haulout")
 inputUD[[14]] <- list(nbUD=4,parIndex=list(2:6,7:10,11:14,15:19),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging1","foraging2","inbound"),UDstates=list(1,2,3,4),sign=c(1,1,1,1))
 
@@ -349,8 +353,9 @@ userBounds[[15]] <- list(dry=matrix(c(0,0.5,
                                       0,0.5,
                                       0.5,1),ncol=2,byrow=TRUE))
 fixPar[[15]] <- getFixPar(DM[[15]])
-maxRate[[15]] <- 1.e+5
+kappa[[15]] <- 4
 stateNames[[15]] <- c("outbound","foraging1","foraging2","inbound","haulout")
 inputUD[[15]] <- list(nbUD=4,parIndex=list(2:6,7:10,11:14,15:19),covNames=list(c("depth","slope","depthslope","d2site","d2site2"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site"),c("depth","slope","depthslope","d2site","d2site2")),UDnames=c("outbound","foraging1","foraging2","inbound"),UDstates=list(1,2,3,4),sign=c(1,1,1,1))
 
 workBounds <- lapply(DM,getWorkBounds)
+prior <- mapply(function(x) getPrior(fixPar[[x]]$beta,DM[[x]],sd=10),1:length(DM))
