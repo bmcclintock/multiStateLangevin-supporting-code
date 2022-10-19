@@ -147,5 +147,3 @@ mala[[9]] <- malaSim(fitLangevin[[9]],inputUD[[9]],niter=50)
 apply(mala[[9]] ,2,mean)
 mala[[14]] <- malaSim(fitLangevin[[14]],inputUD[[14]],niter=50)
 apply(mala[[14]] ,2,mean)
-
-save(fitLangevinOrig,fitLangevin,mala,file="allModels.RData")
