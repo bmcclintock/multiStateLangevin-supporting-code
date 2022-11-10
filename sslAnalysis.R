@@ -21,8 +21,8 @@ if(!requireNamespace("momentuHMM",quietly=TRUE) || packageVersion("momentuHMM")<
 library(momentuHMM)
 
 source("supportingScripts/sslCovariates.R")
-covlist <- getCovariates() # takes a while and a bit of memory, so covlist can be loaded with "sslCovs.RData"
-#load("data/sslCovs.RData")
+#covlist <- getCovariates() # takes a while and a bit of memory, so covlist used in analysis can be loaded with "sslCovs.RData"
+load("data/sslCovs.RData") # load the covariates (queried from ETOPO1 database hosted by NOAA on 6 June 2022)
 load("data/tracks.RData") # load the tracks
 load("data/Par0.RData") # initial parameter values for optimization
 
