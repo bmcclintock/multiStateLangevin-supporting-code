@@ -6,6 +6,9 @@ library(viridis)
 library(ggplot2)
 library(doFuture)
 library(doRNG)
+if(!requireNamespace("RandomFieldsUtils",quietly=TRUE)){
+  install.packages("RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source") # most recent archived version; required by RandomFields
+}
 if(!requireNamespace("RandomFields",quietly=TRUE)){
   install.packages("RandomFields_3.3.14.tar.gz", repos = NULL, type = "source") # most recent archived version; required by Rhabit
 }
