@@ -1,6 +1,7 @@
 # multiStateLangevin-supporting-code
-Supporting data and R code for "A multistate Langevin diffusion for inferring behavior-specific habitat selection and utilization distributions" by McClintock &amp; Lander. The main scripts (**simStudy.R** and **sslAnalysis.R**) both depend on the [`Rhabit`](https://github.com/papayoun/Rhabit)  package, which is not available on CRAN. [`RandomFields`](https://cran.r-project.org/package=RandomFields) is imported by `Rhabit`, but it has been removed and archived by CRAN as of 4 May 2022. Thus in order to install the `Rhabit` package, `RandomFields` must be manually [downloaded](https://cran.r-project.org/src/contrib/Archive/RandomFields/RandomFields_3.3.14.tar.gz) and installed beforehand:
+Supporting data and R code for "A multistate Langevin diffusion for inferring behavior-specific habitat selection and utilization distributions" by McClintock &amp; Lander. The main scripts (**simStudy.R** and **sslAnalysis.R**) both rely on the [`Rhabit`](https://github.com/papayoun/Rhabit)  package, which is not available on CRAN. [`RandomFields`](https://cran.r-project.org/package=RandomFields) is imported by `Rhabit`, but it has been removed and archived by CRAN as of 4 May 2022. Thus in order to install the `Rhabit` package, [`RandomFields`](https://cran.r-project.org/src/contrib/Archive/RandomFields/RandomFields_3.3.14.tar.gz) and [`RandomFieldsUtils`](https://cran.r-project.org/src/contrib/Archive/RandomFieldsUtils/RandomFieldsUtils_1.2.5.tar.gz) must be manually downloaded and installed beforehand:
 ```
+install.packages("RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source")
 install.packages("RandomFields_3.3.14.tar.gz", repos = NULL, type = "source")
 remotes::install_github("papayoun/Rhabit")
 ```
