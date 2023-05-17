@@ -53,7 +53,7 @@ fitLangevin <- UD <- list()
 
 # original single-state model of Michelot et al. (2019)
 fitLangevinOrig <- fitCTHMM(tracks,Time.name="date_time",Time.unit="hours",dist=dist,nbStates=1,DM=DM1,
-                            Par0=list(mu=c(1, -0.15059375, -0.02236392, -2.05770669,  2.01132900, 0),
+                            Par0=list(mu=c(1, -0.15059375, -0.02236392, -2.05770669,  1.00566450, 0),
                                       dry=-0.7103923),
                             fixPar=getFixPar(DM1),
                             userBounds=list(dry=matrix(c(0,0.5),1,2)),

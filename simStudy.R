@@ -31,9 +31,9 @@ resol <- 1
 ncov <- 3
 
 beta1 <- c(6*resol,-4*resol,-5*resol,-0.1*resol) # state1 resource selection coefficients for the spatial covariates
-sigma2_1 <- 5
+sd_1 <- sqrt(5)
 beta2 <- c(-4*resol,6*resol,5*resol,-0.1*resol) # state2 resource selection coefficients for the spatial covariates
-sigma2_2 <- 7.5
+sd_2 <- sqrt(7.5)
 
 beta0 <- matrix(c(-2,-2),1,2)
 
@@ -94,11 +94,11 @@ for(isim in 1:nsims){
                            "mu.y_tm1",                 0,                 0,                 0,                0,"langevin(cov1.y)","langevin(cov2.y)","langevin(cov3.y)","langevin(d2c.y)",0,0,0,
                                     0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,0,0,
                                     0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,1,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,0,0,1,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,0,0,1,
                                     0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,0,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,1,0),10,12,byrow=TRUE,
-                         dimnames=list(c("mean.x_1","mean.x_2","mean.y_1","mean.y_2","sigma.x_1","sigma.x_2","sigma.xy_1","sigma.xy_2","sigma.y_1","sigma.y_2"),
+                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,1,0,
+                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,0,0,1,
+                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,0,0,1),10,12,byrow=TRUE,
+                         dimnames=list(c("mean.x_1","mean.x_2","mean.y_1","mean.y_2","sigma.x_1","sigma.x_2","sigma.y_1","sigma.y_2","sigma.xy_1","sigma.xy_2"),
                                        c("mean:mu_tm1","langevin(cov1)_1","langevin(cov2)_1","langevin(cov3)_1","langevin(d2c)_1","langevin(cov1)_2","langevin(cov2)_2","langevin(cov3)_2","langevin(d2c)_2","sigma:(Intercept)","sigma_2:(Intercept)","sigma.xy:(Intercept)"))))
   # simulate "high resolution" tracks; this can take a while...
   origData <- tryCatch(stop(),error=function(e) e)
@@ -112,7 +112,7 @@ for(isim in 1:nsims){
                                   initialPosition=initialPosition,
                                   dist=dist["mu"],
                                   DM=DM2,
-                                  Par=list(mu=c(1,beta1,beta2,log(sigma2_1*resol),log(sigma2_2*resol)-log(sigma2_1*resol),0)),#,aux=c(10,2)),
+                                  Par=list(mu=c(1,beta1,beta2,log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),0)),#,aux=c(10,2)),
                                   beta=beta0,
                                   formulaDelta=~0+ID,
                                   delta = matrix(ifelse(initState==1,-1.e+100,1.e+100),nbAnimals,1),
@@ -126,9 +126,9 @@ for(isim in 1:nsims){
   DM1 <-  list(mu=matrix(c("mu.x_tm1","langevin(cov1.x)","langevin(cov2.x)","langevin(cov3.x)","langevin(d2c.x)",0,0,
                            "mu.y_tm1","langevin(cov1.y)","langevin(cov2.y)","langevin(cov3.y)","langevin(d2c.y)",0,0,
                                     0,                 0,                 0,                 0,                0,1,0,
-                                    0,                 0,                 0,                 0,                0,0,1,
-                                    0,                 0,                 0,                 0,                0,1,0),5,7,byrow=TRUE,
-                         dimnames=list(c("mean.x","mean.y","sigma.x","sigma.xy","sigma.y"),
+                                    0,                 0,                 0,                 0,                0,1,0,
+                                    0,                 0,                 0,                 0,                0,0,1),5,7,byrow=TRUE,
+                         dimnames=list(c("mean.x","mean.y","sigma.x","sigma.y","sigma.xy"),
                                        c("mean:mu_tm1","langevin(cov1)","langevin(cov2)","langevin(cov3)","langevin(d2c)","sigma:(Intercept)","sigma.xy:(Intercept)"))))
   
   langData <- list()
@@ -142,8 +142,8 @@ for(isim in 1:nsims){
   
   nbStates <- list(2,1)
   DM <- list(DM2,DM1)
-  Par0 <- list(list(mu=c(1,beta1,beta2,log(sigma2_1*resol),log(sigma2_2*resol)-log(sigma2_1*resol),0)),
-               list(mu=c(1,apply(rbind(beta1,beta2),2,mean),log((sigma2_1+sigma2_2)/2*resol),0)))
+  Par0 <- list(list(mu=c(1,beta1,beta2,log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),0)),
+               list(mu=c(1,apply(rbind(beta1,beta2),2,mean),log((sd_1+sd_2)/2*resol),0)))
   fbeta0 <- list(beta0,NULL)
   fixPar <- list(fixPar2,fixPar1)
   
@@ -209,8 +209,8 @@ library(ggplot2)
 parnames <- truepar <- zeroline <- list()
 parnames[[1]] <- c("beta[11]","beta[12]","beta[13]","beta[14]","beta[21]","beta[22]","beta[23]","beta[24]","sigma[1]^2","sigma[2]^2","log(q[12])","log(q[21])")#,"viterbi","stateProbs")
 parnames[[2]] <- c("beta[1]","beta[2]","beta[3]","beta[4]","sigma^2")
-truepar[[1]] <- data.frame(par = parnames[[1]][1:12], value = c(beta1, beta2,sigma2_1,sigma2_2,beta0[1,1],beta0[1,2]), cols=c(rep(2,4),rep(4,4),2,4,2,4))
-truepar[[2]] <- data.frame(par = rep(parnames[[2]],2), value = c(beta1, sigma2_1,beta2,sigma2_2), cols=c(rep(2,5),rep(4,5)))
+truepar[[1]] <- data.frame(par = parnames[[1]][1:12], value = c(beta1, beta2,sd_1,sd_2,beta0[1,1],beta0[1,2]), cols=c(rep(2,4),rep(4,4),2,4,2,4))
+truepar[[2]] <- data.frame(par = rep(parnames[[2]],2), value = c(beta1, sd_1,beta2,sd_2), cols=c(rep(2,5),rep(4,5)))
 zeroline[[1]] <- data.frame(yint = c(rep(0,8)), par=parnames[[1]][c(1:8)])
 zeroline[[2]] <- data.frame(yint = 0, par=parnames[[2]][1:4])
 

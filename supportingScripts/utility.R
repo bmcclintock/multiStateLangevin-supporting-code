@@ -35,7 +35,7 @@ plotUD <- function(nbUD,parIndex,covNames,model,UDnames,UDstates,sign=NULL,cropR
 getWorkBounds <- function(DM){
   nbStates <- nrow(DM$mu)/5
   workBounds <- list(mu=matrix(rep(c(-Inf,Inf),ncol(DM$mu)),ncol=2,byrow=TRUE,dimnames=list(colnames(DM$mu),c("lower","upper"))))
-  if(nbStates>2 & "sigma:(haulout)" %in% colnames(DM$mu)) workBounds$mu["sigma:(haulout)",] <- c(-Inf,0)
+  if(nbStates>2 & "sd:(haulout)" %in% colnames(DM$mu)) workBounds$mu["sd:(haulout)",] <- c(-Inf,0)
   return(workBounds)
 }
 
@@ -56,7 +56,7 @@ getPrior <- function(beta,DM,sd=10){
   if(!is.null(beta)){
     parInd <- paste0(which(is.na(beta)),collapse=",")
     nPar <- sum(unlist(lapply(DM,function(x) ncol(x))))
-    return(eval(parse(text=paste0("prior <- function(par) sum(-(par[",nPar,"+c(",parInd,")]^2/(2*",sd^2,")))"))))
+    return(eval(parse(text=paste0("prior <- function(par) sum(-(par[",nPar,"+c(",parInd,")]^2/(2*",sd^2,")))")),envir=.GlobalEnv))
   } else return()
 }
 
@@ -65,8 +65,9 @@ penAIC <- function(models,sampleSize=3,penalty=1/2*100^(-1)){
   modelName <- unlist(lapply(models,function(x) x$modelName))
   d <- penalty/sampleSize
   for(i in 1:length(models)){
-    nPar <- sum(unlist(lapply(models[[i]]$conditions$DM,function(x) ncol(x))))
-    parInd <- nPar+which(is.na(models[[i]]$conditions$fixPar$beta))
+    nPar <- sum(unlist(lapply(models[[i]]$conditions$fullDM,function(x) ncol(x))))
+    if(isTRUE(models[[i]]$conditions$optMethod=="TMB")) parInd <- nPar+which(!is.na(models[[i]]$conditions$fixPar$beta))
+    else parInd <- nPar+which(is.na(models[[i]]$conditions$fixPar$beta))
     F <- matrix(0,length(models[[i]]$mod$estimate),length(models[[i]]$mod$estimate))
     F[parInd,parInd] <- diag(length(parInd))
     R <- F %*% t(F)
@@ -126,7 +127,7 @@ plotPredRes <- function(model,UDinputs){
   
   cat("Calculating predicted steps and residuals for model '",model$modelName,"'...",sep="")
   for(zoo in 1:nbAnimals){
-    sigma2[zoo,] <-  CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,]
+    sigma2[zoo,] <-  (CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,])^2
     for(i in which(model$data$ID==unique(tracks$ID)[zoo])){
       model$data$pred.x[i] <- model$data$mu.x_tm1[i]
       model$data$pred.y[i] <- model$data$mu.y_tm1[i]
@@ -380,7 +381,7 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,seed=
         ind <- which(tracks$ID==unique(tracks$ID)[zoo])
         stind <- which(tracks$ID==unique(tracks$ID)[zoo] & st==st)
         sti <- which(st[ind]==st)
-        sigma2 <-  CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st]
+        sigma2 <-  (CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st])^2
         if(nbStates==1 || st < nbStates){
           beta <- model$CIbeta$mu$est[parmInd[[st]]]
           covs <- lapply(covlist0[covInd[[st]]],rasterToRhabit)
@@ -435,7 +436,7 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,seed=
       ind <- which(tracks$ID==unique(tracks$ID)[zoo])
       beta <- sigma2 <- covs <- list()
       for(st in 1:nbStates){
-        sigma2[[st]] <-  CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st]
+        sigma2[[st]] <-  (CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st])^2
         if(nbStates==1 || st < nbStates){
           beta[[st]] <- model$CIbeta$mu$est[parmInd[[st]]]
           covs[[st]] <- lapply(covlist0[covInd[[st]]],rasterToRhabit)
