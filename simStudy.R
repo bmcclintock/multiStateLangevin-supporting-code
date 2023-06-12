@@ -37,8 +37,8 @@ sd_2 <- sqrt(7.5)
 
 beta0 <- matrix(c(-2,-2),1,2)
 
-fixPar2 <- list(mu=c(1,rep(NA,10),0)) 
-fixPar1 <- list(mu=c(1,rep(NA,5),0)) 
+fixPar2 <- list(mu=c(NA,1,2,3,4,NA,5,6,7,8,NA,1,2,3,4,NA,5,6,7,8,9,9,10,9,9,10,NA,NA))
+fixPar1 <- list(mu=c(NA,1,2,3,4,NA,1,2,3,4,5,5,NA))
 
 # subsample "high resolution" data
 trimSeq <- obsPerAnimal/c(1,2,5,10,20,50,100)
@@ -88,18 +88,12 @@ for(isim in 1:nsims){
   dist <- list(mu="rw_mvnorm2")   # bivariate normal random walk
   
   # specify 2-state langevin pseudo-design matrix
-  DM2 <-  list(mu=matrix(c("mu.x_tm1","langevin(cov1.x)","langevin(cov2.x)","langevin(cov3.x)","langevin(d2c.x)",                 0,                 0,                 0,                0,0,0,0,
-                           "mu.x_tm1",                 0,                 0,                 0,                0,"langevin(cov1.x)","langevin(cov2.x)","langevin(cov3.x)","langevin(d2c.x)",0,0,0,
-                           "mu.y_tm1","langevin(cov1.y)","langevin(cov2.y)","langevin(cov3.y)","langevin(d2c.y)",                 0,                 0,                 0,                0,0,0,0,
-                           "mu.y_tm1",                 0,                 0,                 0,                0,"langevin(cov1.y)","langevin(cov2.y)","langevin(cov3.y)","langevin(d2c.y)",0,0,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,0,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,1,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,0,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,1,1,0,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,0,0,1,
-                                    0,                 0,                 0,                 0,                0,                 0,                 0,                 0,                0,0,0,1),10,12,byrow=TRUE,
-                         dimnames=list(c("mean.x_1","mean.x_2","mean.y_1","mean.y_2","sigma.x_1","sigma.x_2","sigma.y_1","sigma.y_2","sigma.xy_1","sigma.xy_2"),
-                                       c("mean:mu_tm1","langevin(cov1)_1","langevin(cov2)_1","langevin(cov3)_1","langevin(d2c)_1","langevin(cov1)_2","langevin(cov2)_2","langevin(cov3)_2","langevin(d2c)_2","sigma:(Intercept)","sigma_2:(Intercept)","sigma.xy:(Intercept)"))))
+  DM2 <- list(mu=list(mean.x=~0+mu.x_tm1+langevin(cov1.x)+langevin(cov2.x)+langevin(cov3.x)+langevin(d2c.x),
+                      mean.y=~0+mu.y_tm1+langevin(cov1.y)+langevin(cov2.y)+langevin(cov3.y)+langevin(d2c.y),
+                      sd.x=~state2(intercept),
+                      sd.y=~state2(intercept),
+                      corr.xy=~1))
+  
   # simulate "high resolution" tracks; this can take a while...
   origData <- tryCatch(stop(),error=function(e) e)
   while(inherits(origData,"error")){
@@ -112,24 +106,24 @@ for(isim in 1:nsims){
                                   initialPosition=initialPosition,
                                   dist=dist["mu"],
                                   DM=DM2,
-                                  Par=list(mu=c(1,beta1,beta2,log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),0)),#,aux=c(10,2)),
+                                  Par=list(mu=c(1,beta1,1,beta2,1,beta1,1,beta2,log(sd_1*resol),log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),log(sd_1*resol),log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),0,0)),#,aux=c(10,2)),
                                   beta=beta0,
                                   formulaDelta=~0+ID,
                                   delta = matrix(ifelse(initState==1,-1.e+100,1.e+100),nbAnimals,1),
                                   spatialCovs = spatialCovs, 
+                                  covs=data.frame(intercept=1),
                                   gradient=TRUE,
                                   mvnCoords = "mu",
                                   lambda = lambda, # observation rate (1/lambda is expected time between successive observations); state switches can only occur at times of observations
-                                  states=TRUE),error=function(e) e) 
+                                  states=TRUE,
+                                  TMB=TRUE),error=function(e) e) 
   }
   
-  DM1 <-  list(mu=matrix(c("mu.x_tm1","langevin(cov1.x)","langevin(cov2.x)","langevin(cov3.x)","langevin(d2c.x)",0,0,
-                           "mu.y_tm1","langevin(cov1.y)","langevin(cov2.y)","langevin(cov3.y)","langevin(d2c.y)",0,0,
-                                    0,                 0,                 0,                 0,                0,1,0,
-                                    0,                 0,                 0,                 0,                0,1,0,
-                                    0,                 0,                 0,                 0,                0,0,1),5,7,byrow=TRUE,
-                         dimnames=list(c("mean.x","mean.y","sigma.x","sigma.y","sigma.xy"),
-                                       c("mean:mu_tm1","langevin(cov1)","langevin(cov2)","langevin(cov3)","langevin(d2c)","sigma:(Intercept)","sigma.xy:(Intercept)"))))
+  DM1 <-  list(mu=list(mean.x=~0+mu.x_tm1+langevin(cov1.x)+langevin(cov2.x)+langevin(cov3.x)+langevin(d2c.x),
+                       mean.y=~0+mu.y_tm1+langevin(cov1.y)+langevin(cov2.y)+langevin(cov3.y)+langevin(d2c.y),
+                       sd.x=~1,
+                       sd.y=~1,
+                       corr.xy=~1))
   
   langData <- list()
   for(j in seq_along(trimSeq)){
@@ -142,8 +136,8 @@ for(isim in 1:nsims){
   
   nbStates <- list(2,1)
   DM <- list(DM2,DM1)
-  Par0 <- list(list(mu=c(1,beta1,beta2,log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),0)),
-               list(mu=c(1,apply(rbind(beta1,beta2),2,mean),log((sd_1+sd_2)/2*resol),0)))
+  Par0 <- list(list(mu=c(1,beta1,1,beta2,1,beta1,1,beta2,log(sd_1*resol),log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),log(sd_1*resol),log(sd_1*resol),log(sd_2*resol)-log(sd_1*resol),0,0)),
+               list(mu=c(1,apply(rbind(beta1,beta2),2,mean),1,apply(rbind(beta1,beta2),2,mean),log((sd_1+sd_2)/2*resol),log((sd_1+sd_2)/2*resol),0)))
   fbeta0 <- list(beta0,NULL)
   fixPar <- list(fixPar2,fixPar1)
   
@@ -160,7 +154,9 @@ for(isim in 1:nsims){
                                        Par0=Par0[[i]],
                                        beta0=fbeta0[[i]],
                                        fixPar=fixPar[[i]],
-                                       mvnCoords = "mu"))
+                                       mvnCoords = "mu",
+                                       optMethod="TMB",
+                                       control=list(silent=TRUE)))
       
       ret <- list()
       ret$CIbeta <- fit$CIbeta
@@ -180,12 +176,14 @@ for(isim in 1:nsims){
 estimates <- list()
 for(j in names(results[[1]][[1]])){
   estimates[[j]] <- NULL
+  if(j=="fit2") muInd <- c(1,2,3,4,5,7,8,9,10,21,23,27)
+  else if(j=="fit1") muInd <- c(1,2,3,4,5,11,13)
   for(k in as.character(obsPerAnimal/trimSeq[1:7]*1/lambda)){
-    tmp <- as.data.frame(do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIbeta$mu$est)))
+    tmp <- as.data.frame(do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIbeta$mu$est[muInd])))
     tmp$seq <- rep((obsPerAnimal/trimSeq*1/lambda)[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)],nsims)
     if(grepl("fit2",j)) {
-      tmp$sigma_1 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIreal$mu$est[3,1]))
-      tmp$sigma_2 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIreal$mu$est[3,2]))
+      tmp$sigma2_1 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIreal$mu$est[3,1]^2))
+      tmp$sigma2_2 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIreal$mu$est[3,2]^2))
       tmp$q_12 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIbeta$beta$est[1,1]))
       tmp$q_21 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIbeta$beta$est[1,2]))
       tmp$viterbi <- do.call(rbind,lapply(results,function(x) mean(x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$viterbi==x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$states)))
@@ -196,7 +194,7 @@ for(j in names(results[[1]][[1]])){
       }))
       colnames(tmp)[c(2:9,14:15,16:17,18:19)] <- c("beta[11]","beta[12]","beta[13]","beta[14]","beta[21]","beta[22]","beta[23]","beta[24]","sigma[1]^2","sigma[2]^2","log(q[12])","log(q[21])","Viterbi","p[s]>0.5")
     } else {
-      tmp$sigma <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIreal$mu$est[3,1]))
+      tmp$sigma2 <- do.call(rbind,lapply(results,function(x) x[[which(as.character(obsPerAnimal/trimSeq*1/lambda)==k)]][[j]]$CIreal$mu$est[3,1]^2))
       colnames(tmp)[c(2:5,9)] <- c("beta[1]","beta[2]","beta[3]","beta[4]","sigma^2")
     }
     estimates[[j]] <- rbind(estimates[[j]],tmp)
@@ -209,8 +207,8 @@ library(ggplot2)
 parnames <- truepar <- zeroline <- list()
 parnames[[1]] <- c("beta[11]","beta[12]","beta[13]","beta[14]","beta[21]","beta[22]","beta[23]","beta[24]","sigma[1]^2","sigma[2]^2","log(q[12])","log(q[21])")#,"viterbi","stateProbs")
 parnames[[2]] <- c("beta[1]","beta[2]","beta[3]","beta[4]","sigma^2")
-truepar[[1]] <- data.frame(par = parnames[[1]][1:12], value = c(beta1, beta2,sd_1,sd_2,beta0[1,1],beta0[1,2]), cols=c(rep(2,4),rep(4,4),2,4,2,4))
-truepar[[2]] <- data.frame(par = rep(parnames[[2]],2), value = c(beta1, sd_1,beta2,sd_2), cols=c(rep(2,5),rep(4,5)))
+truepar[[1]] <- data.frame(par = parnames[[1]][1:12], value = c(beta1, beta2,sd_1^2,sd_2^2,beta0[1,1],beta0[1,2]), cols=c(rep(2,4),rep(4,4),2,4,2,4))
+truepar[[2]] <- data.frame(par = rep(parnames[[2]],2), value = c(beta1, sd_1^2,beta2,sd_2^2), cols=c(rep(2,5),rep(4,5)))
 zeroline[[1]] <- data.frame(yint = c(rep(0,8)), par=parnames[[1]][c(1:8)])
 zeroline[[2]] <- data.frame(yint = 0, par=parnames[[2]][1:4])
 
@@ -269,24 +267,25 @@ estUD <- list()
 estUD[[1]] <- UD1
 estUD[[2]] <- UD2
 estUD[[3]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[4]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[4]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[4]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[4]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[4]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD[[5]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[1]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[6]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[1]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[6]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[1]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD[[7]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[5]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[8]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[5]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[8]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[5]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD[[9]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[2]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[10]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[2]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[10]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[2]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD[[11]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[6]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[12]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[6]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[12]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[6]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD[[13]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[3]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[14]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[3]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[14]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[3]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD[[15]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[7]]$fit2$CIbeta$mu$est[2:5],log=TRUE))
-estUD[[16]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[7]]$fit2$CIbeta$mu$est[6:9],log=TRUE))
+estUD[[16]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[7]]$fit2$CIbeta$mu$est[7:10],log=TRUE))
 estUD <- stack(estUD)
-UDnames <- c("True UD1","True UD2","UD1: dt = 0.1","UD2: dt = 0.1","UD1: dt = 0.01","UD2: dt = 0.01","UD1: dt = 0.2","UD2: dt = 0.2","UD1: dt = 0.02","UD2: dt = 0.02","UD1: dt = 0.5","UD2: dt = 0.5","UD1: dt = 0.05","UD2: dt = 0.05","UD1: dt = 1","UD2: dt = 1")
+UDnames <- c("True UD1","True UD2","UD1: \u0394\u0074 = 0.1","UD2: \u0394\u0074 = 0.1","UD1: \u0394\u0074 = 0.01","UD2: \u0394\u0074 = 0.01","UD1: \u0394\u0074 = 0.2","UD2: \u0394\u0074 = 0.2","UD1: \u0394\u0074 = 0.02","UD2: \u0394\u0074 = 0.02","UD1: \u0394\u0074 = 0.5","UD2: \u0394\u0074 = 0.5","UD1: \u0394\u0074 = 0.05","UD2: \u0394\u0074 = 0.05","UD1: \u0394\u0074 = 1","UD2: \u0394\u0074 = 1")
 names(estUD) <- UDnames
 
-pdf("simUD2.pdf",width=14,height=14)
+library(Cairo)
+Cairo(type="pdf",file="simUD2.pdf",width=11,height=11, units='in')
 spplot(estUD,
        layout=c(4, 4), # create a 4x4 layout for the data
        col.regions=viridis_pal()(5000), # add a color ramp
@@ -305,10 +304,10 @@ estUD1[[5]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[
 estUD1[[6]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[6]]$fit1$CIbeta$mu$est[2:5],log=TRUE))
 estUD1[[7]] <- rhabitToRaster(getUD(covariates=covlist[[covsim]], beta=results[[covsim]][[7]]$fit1$CIbeta$mu$est[2:5],log=TRUE))
 estUD1 <- stack(estUD1)
-UDnames <- c("dt = 0.01","dt = 0.02","dt = 0.05","dt = 0.1","dt = 0.2","dt = 0.5","dt = 1")
+UDnames <- c("\u0394\u0074 = 0.01","\u0394\u0074 = 0.02","\u0394\u0074 = 0.05","\u0394\u0074 = 0.1","\u0394\u0074 = 0.2","\u0394\u0074 = 0.5","\u0394\u0074 = 1")
 names(estUD1) <- UDnames
 
-pdf("simUD1.pdf",width=14,height=7)
+Cairo(type="pdf",file="simUD1.pdf",width=11,height=7, units='in')
 spplot(estUD1,
        layout=c(4, 2), # create a 4x4 layout for the data
        col.regions=viridis_pal()(5000), # add a color ramp

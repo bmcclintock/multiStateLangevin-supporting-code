@@ -32,31 +32,117 @@ plotUD <- function(nbUD,parIndex,covNames,model,UDnames,UDstates,sign=NULL,cropR
   if(return) return(logUD)
 }
 
-getWorkBounds <- function(DM){
-  nbStates <- nrow(DM$mu)/5
-  workBounds <- list(mu=matrix(rep(c(-Inf,Inf),ncol(DM$mu)),ncol=2,byrow=TRUE,dimnames=list(colnames(DM$mu),c("lower","upper"))))
-  if(nbStates>2 & "sd:(haulout)" %in% colnames(DM$mu)) workBounds$mu["sd:(haulout)",] <- c(-Inf,0)
+getWorkBounds <- function(DM,nbStates,data){
+  workBounds <- list()
+  for(i in names(DM)){
+    if(i=="mu") parNames <- list(mu=c("mean.x","mean.y","sd.x","sd.y","corr.xy"))
+    else parNames <- list(dry="prob")
+    fullDM <- momentuHMM:::make_matrices(momentuHMM:::make_formulas(DM[i],i,parNames,nbStates),data %>% mutate(mu.x_tm1=mu.x,mu.y_tm1=mu.y))$X_fe
+    parms <- colnames(fullDM)
+    workBounds[[i]] <- matrix(rep(c(-Inf,Inf),ncol(fullDM)),ncol=2,byrow=TRUE,dimnames=list(parms,c("lower","upper")))
+    if(i=="mu"){
+      bInd <- which(grepl(".intercept",colnames(fullDM)))
+      if(nbStates>2 & length(bInd)) workBounds[[i]][bInd,] <- matrix(c(-Inf,0),nrow=length(bInd),ncol=2,byrow=TRUE)
+    } else {
+      if(nbStates>1) {
+        workBounds[[i]][1:(nbStates-1),] <- matrix(c(-Inf,0),nrow=nbStates-1,ncol=2,byrow=TRUE)
+        workBounds[[i]][nbStates,] <- c(0,Inf)
+      } else workBounds[[i]][nbStates,] <- c(-Inf,0)
+    }
+  }
   return(workBounds)
 }
 
-getFixPar <- function(DM){
-  nbStates <- nrow(DM$mu)/5
-  fixPar <- list(mu=c(1,rep(NA,ncol(DM$mu)-2),0),
-       delta=c(rep(1.e-100,nbStates-1),1-1.e-100*(nbStates-1)))
+getFixPar <- function(DM,nbStates,data,meancons=NULL,sdcons=NULL,drycons=NULL){
+  fixPar <- list()
+  parNames <- list(mu=c("mean.x","mean.y","sd.x","sd.y","corr.xy"))
+  fullDM <- momentuHMM:::make_matrices(momentuHMM:::make_formulas(DM["mu"],"mu",parNames,nbStates),data %>% mutate(mu.x_tm1=mu.x,mu.y_tm1=mu.y))$X_fe
+  parms <- colnames(fullDM)
+  fixPar$mu <- 1:length(parms)
+  tm1Ind <- which(grepl("_tm1",parms))
+  fixPar$mu[tm1Ind] <- NA
   if(nbStates>2){
-    fixPar$beta <- matrix(NA,2,nbStates*(nbStates-1))
-    fixPar$beta[,nbStates-1] <- c(-1.e+10,0)
-    fixPar$beta[,nbStates*(nbStates-1)] <- c(-1.e+10,0)
-    fixPar$beta[2,nbStates*(nbStates-1)-(nbStates-2):1] <- 0
+    if(!is.null(meancons)){
+      for(j in 1:length(meancons)){
+        refInd <- which(grepl(paste0("mean.x.state",meancons[[j]][1]),parms))
+        conInd <- NULL
+        for(k in 2:length(meancons[[j]])){
+          conInd <- c(conInd,which(grepl(paste0("mean.x.state",meancons[[j]][k]),parms)))
+        }
+        fixPar$mu[conInd] <- fixPar$mu[refInd]
+      }
+    }
   }
+  meanInd <- which(grepl("mean",parms))
+  fixPar$mu[which(duplicated(gsub(".y","",gsub(".x","",parms[meanInd]))))] <- fixPar$mu[which(!duplicated(gsub(".y","",gsub(".x","",parms[meanInd]))))]
+  
+  sdInd <- which(grepl("sd",parms))
+  if(nbStates>1){
+    fixPar$mu[which(grepl(paste0("mu.sd.x.state",nbStates,".(Intercept)"),parms,fixed=TRUE))] <- fixPar$mu[sdInd[1]]
+    if(!is.null(sdcons)){
+      for(j in 1:length(sdcons)){
+        refInd <- which(grepl(paste0("sd.x.state",sdcons[[j]][1]),parms))
+        conInd <- NULL
+        for(k in 2:length(sdcons[[j]])){
+          conInd <- c(conInd,which(grepl(paste0("sd.x.state",sdcons[[j]][k]),parms)))
+        }
+        fixPar$mu[conInd] <- fixPar$mu[refInd]
+      }
+    }
+  }
+  sdInd <- which(grepl("sd",parms))
+  fixPar$mu[length(meanInd)+which(duplicated(gsub(".y.","",gsub(".x.","",parms[sdInd]))))] <- fixPar$mu[length(meanInd)+which(!duplicated(gsub(".y.","",gsub(".x.","",parms[sdInd]))))]
+  
+  fixPar$mu <- momentuHMM:::reorderFix(fixPar$mu)
+  fixPar$mu[which(grepl("corr.xy",parms))] <- NA
+  names(fixPar$mu) <- parms
+  
+  parNames <- list(dry="prob")
+  fullDM <- momentuHMM:::make_matrices(momentuHMM:::make_formulas(DM["dry"],"dry",parNames,nbStates),data)$X_fe
+  parms <- colnames(fullDM)
+  fixPar$dry <- 1:ncol(fullDM)
+  if(!is.null(drycons)){
+    for(j in 1:length(drycons)){
+      refInd <- which(grepl(paste0("prob.state",drycons[[j]][1]),parms))
+      conInd <- NULL
+      for(k in 2:length(drycons[[j]])){
+        conInd <- c(conInd,which(grepl(paste0("prob.state",drycons[[j]][k]),parms)))
+      }
+      fixPar$dry[conInd] <- fixPar$dry[refInd]
+    }
+    fixPar$dry <- momentuHMM:::reorderFix(fixPar$dry)
+  }
+  
+  if(nbStates>2){
+    fixPar$beta <- matrix(1:(2*nbStates*(nbStates-1)),2,nbStates*(nbStates-1))
+    fixPar$beta[,nbStates-1] <- NA
+    fixPar$beta[,nbStates*(nbStates-1)] <- NA
+    fixPar$beta[2,nbStates*(nbStates-1)-(nbStates-2):1] <- NA
+    fixPar$beta <- momentuHMM:::reorderFix(fixPar$beta)
+  }
+  fixPar$delta <- c(rep(NA,nbStates-1),NA*(nbStates-1))
   return(fixPar)
 }
 
-getPrior <- function(beta,DM,sd=10){
-  if(!is.null(beta)){
-    parInd <- paste0(which(is.na(beta)),collapse=",")
-    nPar <- sum(unlist(lapply(DM,function(x) ncol(x))))
-    return(eval(parse(text=paste0("prior <- function(par) sum(-(par[",nPar,"+c(",parInd,")]^2/(2*",sd^2,")))")),envir=.GlobalEnv))
+getLangIndex <- function(fp,nbStates){
+  estParNames <- names(fp$mu)[which(!is.na(fp$mu) & !duplicated(fp$mu))]
+  parIndex <- list()
+  if(any(grepl("state1.langevin",estParNames))) parIndex[[1]] <- match(estParNames[which(grepl("state1.langevin",estParNames))],names(fp$mu))
+  if(nbStates>2){
+    for(i in 2:(nbStates-1)){
+      if(any(grepl(paste0("state",i,".langevin"),estParNames))) parIndex[[i]] <- match(estParNames[which(grepl(paste0("state",i,".langevin"),estParNames))],names(fp$mu))
+    }
+  }
+  return(parIndex)
+}
+
+getPrior <- function(fixPar,sd=10){
+  if(!is.null(fixPar$beta)){
+    parInd <- which(is.na(fixPar$beta))
+    nPar <- sum(unlist(lapply(fixPar[c("mu","dry")],function(x) length(x))))
+    prior <- list(beta=matrix(c(0,sd),nrow=length(fixPar$beta),ncol=2,byrow=TRUE))
+    prior$beta[parInd,] <- NA
+    return(prior)
   } else return()
 }
 
@@ -346,7 +432,7 @@ simStateMALA <- function (beta, gamma2 = 1, times, states, loc0, cov_list = NULL
 }
 
 # Simulate MALA from fitted model
-malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,seed=1){
+malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,ssl=TRUE,seed=114){
 
   set.seed(seed,kind="Mersenne-Twister",normal.kind = "Inversion")
 
@@ -382,7 +468,7 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,seed=
         stind <- which(tracks$ID==unique(tracks$ID)[zoo] & st==st)
         sti <- which(st[ind]==st)
         sigma2 <-  (CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st])^2
-        if(nbStates==1 || st < nbStates){
+        if(nbStates==1 || st < (nbStates+ifelse(ssl,0,1))){
           beta <- model$CIbeta$mu$est[parmInd[[st]]]
           covs <- lapply(covlist0[covInd[[st]]],rasterToRhabit)
         } else {
@@ -437,7 +523,7 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,seed=
       beta <- sigma2 <- covs <- list()
       for(st in 1:nbStates){
         sigma2[[st]] <-  (CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st])^2
-        if(nbStates==1 || st < nbStates){
+        if(nbStates==1 ||  st < (nbStates+ifelse(ssl,0,1))){
           beta[[st]] <- model$CIbeta$mu$est[parmInd[[st]]]
           covs[[st]] <- lapply(covlist0[covInd[[st]]],rasterToRhabit)
         } else {

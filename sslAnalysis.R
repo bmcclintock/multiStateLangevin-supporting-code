@@ -43,22 +43,30 @@ covlistCrop <- lapply(covlist0,function(x) raster::crop(x,extent(-2247.282,-1212
 
 # prepare data for momentuHMM and calculate gradients
 tracks <- prepData(tracks,coordNames=c("mu.x","mu.y"),altCoordNames = "mu",spatialCovs=covlist0,gradient=TRUE)
+tracks$intercept <- 1
 
 # define data stream distribution
 dist <- list(mu="rw_mvnorm2",dry="bern")
 
-source("supportingScripts/DM.R") # pseudo-design matrix definitions for each model
+source("supportingScripts/DM.R") # model definitions 
 
 fitLangevin <- UD <- list()
 
 # original single-state model of Michelot et al. (2019)
-fitLangevinOrig <- fitCTHMM(tracks,Time.name="date_time",Time.unit="hours",dist=dist,nbStates=1,DM=DM1,
-                            Par0=list(mu=c(1, -0.15059375, -0.02236392, -2.05770669,  1.00566450, 0),
-                                      dry=-0.7103923),
-                            fixPar=getFixPar(DM1),
-                            userBounds=list(dry=matrix(c(0,0.5),1,2)),
+fitLangevinOrig <- fitCTHMM(tracks,Time.name="date_time",Time.unit="hours",dist=dist,nbStates=1,
+                            DM=list(mu = list(mean.x=~mu.x_tm1+langevin(depth.x)+langevin(slope.x)+langevin(d2site.x),
+                                              mean.y=~mu.y_tm1+langevin(depth.y)+langevin(slope.y)+langevin(d2site.y),
+                                              sd.x=~1,
+                                              sd.y=~1,
+                                              corr.xy=~1),
+                                    dry = list(prob=~1)),
+                            Par0=list(mu=c(1, -0.15059375, -0.02236392, -2.05770669,  1, -0.15059375, -0.02236392, -2.05770669, 1.00566450, 1.00566450, 0),
+                                      dry=-0.4844352),
+                            fixPar=list(mu=c(NA,1,2,3,NA,1,2,3,4,4,NA)),
+                            workBounds=list(dry=matrix(c(-Inf,0),1,2)),
                             mvnCoords = "mu",
-                            nlmPar=list(print.level=2),stateNames="outbound",modelName="S=1 sigma(.) beta(depth+slope+d2site)")
+                            optMethod="TMB",control=list(silent=TRUE,trace=1),
+                            stateNames="outbound",modelName="S=1 sigma(.) beta(depth+slope+d2site)")
 UDO <- plotUD(nbUD=1,parIndex=list(2:4),covNames=list(c("depth","slope","d2site")),model=fitLangevinOrig,UDnames="outbound",UDstates=list(1),return=TRUE)
 
 # fit models with additional states and covariates defined in `DM.R`
@@ -67,13 +75,14 @@ for(i in 1:length(DM)){
   fitLangevin[[i]]<- fitCTHMM(tracks,Time.name="date_time",Time.unit="hours",dist=dist,nbStates=nbStates[[i]],DM=DM[[i]],
                                Par0=Par[[i]]$Par,
                                beta0=Par[[i]]$beta,
+                               delta0=Par[[i]]$delta,
                                formula=formula[[i]],
                                fixPar=fixPar[[i]],
                                prior=prior[[i]],
-                               userBounds=userBounds[[i]],
                                workBounds=workBounds[[i]],
                                mvnCoords = "mu",
-                               nlmPar=list(print.level=2),stateNames=stateNames[[i]],modelName=modelName[[i]],kappa=kappa[[i]])
+                               optMethod="TMB",stateNames=stateNames[[i]],modelName=modelName[[i]],kappa=kappa[[i]],
+                               control=list(silent=TRUE,trace=1))
   UD[[i]] <- plotUD(inputUD[[i]]$nbUD,inputUD[[i]]$parIndex,inputUD[[i]]$covNames,model=fitLangevin[[i]],inputUD[[i]]$UDnames,inputUD[[i]]$UDstates,inputUD[[i]]$sign,return=TRUE)
 }
 
@@ -124,7 +133,7 @@ sim <- expandUD <- list()
 initPos <- mapply(function(x) c(tracks[which(tracks$ID==x)[1],c("mu.x")],tracks[which(tracks$ID==x)[1],c("mu.y")]),unique(tracks$ID),SIMPLIFY = FALSE)
 for(i in c(2,9,14)){
   message("\n",modelName[[i]])
-  set.seed(118018,kind="Mersenne-Twister",normal.kind = "Inversion")
+  set.seed(719647,kind="Mersenne-Twister",normal.kind = "Inversion")
   sim[[i]] <- simCTHMM(model=fitLangevin[[i]],spatialCovs=covlist0,initialPosition=initPos,states=TRUE,retrySims=5)
   expandUD[[i]] <- plotUD(inputUD[[i]]$nbUD,inputUD[[i]]$parIndex,inputUD[[i]]$covNames,model=fitLangevin[[i]],inputUD[[i]]$UDnames,inputUD[[i]]$UDstates,inputUD[[i]]$sign,cropRast=FALSE,return=TRUE)
 }
