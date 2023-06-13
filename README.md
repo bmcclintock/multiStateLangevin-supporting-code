@@ -13,7 +13,7 @@ remotes::install_github("bmcclintock/momentuHMM@develop",dependencies = TRUE)
 **simStudy.R** contains the simulation experiment.
 
 ## Plains zebra illustration
-**zebraAnalysis.R** contains the plain zebra analysis. All data necessary for running the script are in the **data** folder. Supporting scripts, including utility functions (**utility.R**) are in the **supportingScripts** folder. **zebraAnalysis.RData** is the saved workspace containing the results reported in the paper. 
+**zebraAnalysis.R** contains the plains zebra analysis. All data necessary for running the script are in the **data** folder. Supporting scripts, including utility functions (**utility.R**) are in the **supportingScripts** folder. **zebraAnalysis.RData** is the saved workspace containing the results reported in the paper. 
 
 
 ## Steller seal lion illustration
