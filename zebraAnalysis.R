@@ -17,7 +17,7 @@ library(momentuHMM)
 
 source("supportingScripts/utility.R")
 
-# load zebra data
+# load zebra data from Michelot et al. (2020)
 raw <- read.csv("data/zebra.csv")
 
 # remove missing locations
@@ -62,6 +62,7 @@ formula <- ~cosinor(tod,period=24)
 stateNames <- c("encamped","exploratory")
 stateCols <- c("#56B4E9","#E69F00")
 
+# specify model
 DM <- list(mu=list(mean.x=~0+mu.x_tm1+langevin(grass.x)+langevin(bushgrass.x)+langevin(bush.x)+langevin(wood.x),
                    mean.y=~0+mu.y_tm1+langevin(grass.y)+langevin(bushgrass.y)+langevin(bush.y)+langevin(wood.y),
                    sd.x=~1,
@@ -75,10 +76,13 @@ zebraFit <- fitCTHMM(tracks,Time.name="date_time",nbStates=nbStates,dist=dist,DM
                      Par0=list(mu=c(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-4,-2,-4,-2,0,0)),fixPar=fixPar,
                      optMethod="TMB",control=list(silent=TRUE,trace=1),stateNames=stateNames,mvnCoords="mu")
 
+# plot pseudo-residuals
 plotPR(zebraFit)
 
+# plot stationary distribution as a function of time of day
 stpr <- plotStationary(zebraFit,plotCI=TRUE,col=stateCols,return=TRUE)
 
+# Viterbi-decoded states
 st <- viterbi(zebraFit)
 
 # state 1 UD
@@ -100,6 +104,7 @@ tis <- timeInStates(zebraFit) # activity budgets
 logUD <- log(tis$encamped*exp(logUD1) + tis$exploratory*exp(logUD2))
 plotSpatialCov(zebraFit,logUD,colors=scico(palette="roma",256,direction=-1),col=stateCols)
 
+# plot the habitat selection coefficients
 beta <- rbind(as.data.frame(lapply(zebraFit$CIbeta$mu,function(x) x[,2:5])),as.data.frame(lapply(zebraFit$CIbeta$mu,function(x) x[,7:10])))
 beta$cov <- c("grassland","bushed grassland","bushland","woodland")
 beta$state <- rep(stateNames,each=4)
@@ -109,12 +114,14 @@ ggplot(beta, aes(x=factor(cov,level=beta$cov[1:4]), y=est, group=state, colour=s
   xlab("distance to habitat type") + ylab(expression(beta)) +
   theme(legend.text = element_text(size = rel(1.15)),legend.title=element_text(size=rel(1.35)),axis.title=element_text(size = rel(1.25)),axis.text=element_text(size = rel(1.15)))
 
+# steps and turns by state
 par(mfrow=c(2,2))
 hist(zebraFit$data$step[which(st==1)],breaks=seq(0,4.5,length=40),main="encamped step lengths")
 hist(zebraFit$data$angle[which(st==1)],breaks=seq(-pi,pi,length=40),main="encamped turn angles")
 hist(zebraFit$data$step[which(st==2)],breaks=seq(0,4.5,length=40),main="exploratory step lengths")
 hist(zebraFit$data$angle[which(st==2)],breaks=seq(-pi,pi,length=40),main="exploratory turn angles")
 
+# MALA simulation
 mala <- malaSim(zebraFit,list(parIndex=list(c(2:5),c(7:10)),covNames=list(c("grass","bushgrass","bush","wood"),c("grass","bushgrass","bush","wood"))),niter=50,ssl=FALSE)
 apply(mala,2,mean)
 
