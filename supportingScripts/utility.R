@@ -374,8 +374,63 @@ sojournTimePlot <- function(model){
   
 }
 
+# modification of Rhabit:::simMALA independently by state
+simMALA <- function (beta, corr = 0, gamma2 = 1, times, loc0, cov_list = NULL, grad_fun = NULL, 
+          silent = FALSE) 
+{
+  Rhabit:::checkCovGrad(cov_list, grad_fun)
+  nb_obs <- length(times)
+  J <- length(beta)
+  xy <- matrix(NA, nb_obs, 2)
+  xy[1, ] <- loc0
+  dt <- diff(times)
+  covgrad <- Rhabit:::gradLogUD(beta = beta, loc = xy[1, ], cov_list = cov_list, 
+                       grad_fun = grad_fun, check = FALSE)
+  g <- covgrad %*% beta
+  logRSF <- Rhabit:::logRSFinterp(locs = xy[1, ], beta = beta, cov_list = cov_list)
+  acc <- 0
+  rej <- 0
+  lag <- 0
+  for (t in 2:nb_obs) {
+    if (!silent) 
+      cat("\rSimulating Langevin process...", round(100 * 
+                                                      t/nb_obs), "%")
+    rand_part <- stats::rnorm(2, 0, sqrt(gamma2 * dt[t - 1]))
+    
+    if(t>2) lag <- (xy[t - 1, ]-xy[t - 2, ]) * dt[t - 1]
+    xyprime <- xy[t - 1, ] + lag * corr + 0.5 * g * gamma2 * dt[t - 1] + rand_part
+
+    covgrad <- Rhabit:::gradLogUD(beta = beta, loc = xyprime, cov_list = cov_list, 
+                         grad_fun = grad_fun, check = FALSE)
+    gprime <- covgrad %*% beta
+    logRSFprime <- Rhabit:::logRSFinterp(locs = xyprime, beta = beta, 
+                                cov_list = cov_list)
+    logProp <- sum(dnorm(xy[t - 1, ] + lag * corr, xyprime + gamma2 * 
+                           dt[t - 1] * gprime/2, sqrt(gamma2 * dt[t - 1]), 
+                         log = TRUE))
+    logPropPrime <- sum(dnorm(xyprime, xy[t - 1, ] + lag * corr + gamma2 * 
+                                dt[t - 1] * g/2, sqrt(gamma2 * dt[t - 1]), log = TRUE))
+    logAR <- logRSFprime + logProp - logRSF - logPropPrime
+    if (log(runif(1)) < logAR) {
+      xy[t, ] <- xyprime
+      g <- gprime
+      logRSF <- logRSFprime
+      acc <- acc + 1
+    }
+    else {
+      xy[t, ] <- xy[t - 1, ]
+      rej <- rej + 1
+    }
+  }
+  if (!silent) 
+    cat("\n")
+  main_df <- data.frame(x = xy[, 1], y = xy[, 2], t = times)
+  return(list(data = main_df, acc = acc, rej = rej))
+}
+
+
 # modification of Rhabit:::simMALA for state-dependent UDs
-simStateMALA <- function (beta, gamma2 = 1, times, states, loc0, cov_list = NULL, grad_fun = NULL, 
+simStateMALA <- function (beta, corr = 0, gamma2 = 1, times, states, loc0, cov_list = NULL, grad_fun = NULL, 
                           silent = FALSE) 
 {
   lapply(cov_list,function(x) Rhabit:::checkCovGrad(x, grad_fun))
@@ -387,6 +442,7 @@ simStateMALA <- function (beta, gamma2 = 1, times, states, loc0, cov_list = NULL
   
   acc <- 0
   rej <- 0
+  lag <- 0
   stateAcc <- stateRej <- numeric(length(gamma2))
   
   for (t in 2:nb_obs) {
@@ -400,16 +456,18 @@ simStateMALA <- function (beta, gamma2 = 1, times, states, loc0, cov_list = NULL
     g <- covgrad %*% beta[[states[t-1]]]
     logRSF <- Rhabit:::logRSFinterp(locs = xy[t-1, ], beta = beta[[states[t-1]]], cov_list = cov_list[[states[t-1]]])
     
-    xyprime <- xy[t - 1, ] + 0.5 * g * gamma2[[states[t-1]]] * dt[t - 1] + rand_part
+    if(t>2) lag <- (xy[t - 1, ]-xy[t - 2, ]) * dt[t - 1]
+    xyprime <- xy[t - 1, ] + lag * corr[[states[t-1]]] + 0.5 * g * gamma2[[states[t-1]]] * dt[t - 1] + rand_part
+    
     covgrad <- Rhabit:::gradLogUD(beta = beta[[states[t-1]]], loc = xyprime, cov_list = cov_list[[states[t-1]]], 
                                   grad_fun = grad_fun, check = FALSE)
     gprime <- covgrad %*% beta[[states[t-1]]]
     logRSFprime <- Rhabit:::logRSFinterp(locs = xyprime, beta = beta[[states[t-1]]], 
                                          cov_list = cov_list[[states[t-1]]])
-    logProp <- sum(dnorm(xy[t - 1, ], xyprime + gamma2[[states[t-1]]] * 
+    logProp <- sum(dnorm(xy[t - 1, ] + lag * corr[[states[t-1]]], xyprime + gamma2[[states[t-1]]] * 
                            dt[t - 1] * gprime/2, sqrt(gamma2[[states[t-1]]] * dt[t - 1]), 
                          log = TRUE))
-    logPropPrime <- sum(dnorm(xyprime, xy[t - 1, ] + gamma2[[states[t-1]]] * 
+    logPropPrime <- sum(dnorm(xyprime, xy[t - 1, ] + lag * corr[[states[t-1]]] + gamma2[[states[t-1]]] * 
                                 dt[t - 1] * g/2, sqrt(gamma2[[states[t-1]]] * dt[t - 1]), log = TRUE))
     logAR <- logRSFprime + logProp - logRSF - logPropPrime
     if (log(runif(1)) < logAR) {
@@ -471,9 +529,17 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,ssl=T
         if(nbStates==1 || st < (nbStates+ifelse(ssl,0,1))){
           beta <- model$CIbeta$mu$est[parmInd[[st]]]
           covs <- lapply(covlist0[covInd[[st]]],rasterToRhabit)
+          corr <- rep(0,2)
+          if(any(grepl(paste0("mean.x_",st,":crw(mu.x_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))){
+            corr[1] <- model$CIbeta$mu$est[which(grepl(paste0("mean.x_",st,":crw(mu.x_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))]
+          }
+          if(any(grepl(paste0("mean.y_",st,":crw(mu.y_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))){
+            corr[2] <- model$CIbeta$mu$est[which(grepl(paste0("mean.y_",st,":crw(mu.y_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))]
+          }
         } else {
           beta <- rep(0,length(covInd[[1]]))
           covs <- lapply(covlist0[covInd[[1]]],rasterToRhabit)
+          corr <- rep(0,2)
         }
         
         times <- as.numeric(tracks$date_time[ind])
@@ -491,11 +557,13 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,ssl=T
             # MALA simulation, based on estimated parameters and time grid of observation
             
             sim <- list()
+
             for(sq in 1:nrow(seqs)){
-              sim[[sq]] <- Rhabit:::simMALA(beta = beta, gamma2 = sigma2, 
+              sim[[sq]] <- simMALA(beta = beta, corr = corr, gamma2 = sigma2, 
                                             times = times[seq(seqs[sq,1],seqs[sq,2])], loc0 = c(tracks[seqs[sq,1],"mu.x"],tracks[seqs[sq,1],"mu.y"]), 
                                             cov_list = covs, silent=TRUE)
             }
+            
             # Acceptance rate
             acc[iter,zoo] <- acc[iter,zoo] + sum(unlist(lapply(sim,function(x) x$acc)))
             rej[iter,zoo] <- rej[iter,zoo] + sum(unlist(lapply(sim,function(x) x$rej)))
@@ -520,15 +588,23 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,ssl=T
       cat("## Individual",zoo)
       cat("\n######################\n")
       ind <- which(tracks$ID==unique(tracks$ID)[zoo])
-      beta <- sigma2 <- covs <- list()
+      beta <- sigma2 <- covs <- corr <- list()
       for(st in 1:nbStates){
         sigma2[[st]] <-  (CIreal(model,covs=data.frame(ID=unique(tracks$ID)[zoo]),parms="mu")$mu$est[3,st])^2
         if(nbStates==1 ||  st < (nbStates+ifelse(ssl,0,1))){
           beta[[st]] <- model$CIbeta$mu$est[parmInd[[st]]]
           covs[[st]] <- lapply(covlist0[covInd[[st]]],rasterToRhabit)
+          corr[[st]] <- rep(0,2)
+          if(any(grepl(paste0("mean.x_",st,":crw(mu.x_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))){
+            corr[[st]][1] <- model$CIbeta$mu$est[which(grepl(paste0("mean.x_",st,":crw(mu.x_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))]
+          }
+          if(any(grepl(paste0("mean.y_",st,":crw(mu.y_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))){
+            corr[[st]][2] <- model$CIbeta$mu$est[which(grepl(paste0("mean.y_",st,":crw(mu.y_tm1)"),colnames(model$CIbeta$mu$est),fixed=TRUE))]
+          }
         } else {
           beta[[nbStates]] <- rep(0,length(covInd[[1]]))
           covs[[nbStates]] <- lapply(covlist0[covInd[[1]]],rasterToRhabit)
+          corr[[nbStates]] <- rep(0,2)
         }
       }
       
@@ -543,9 +619,9 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,ssl=T
         tryCatch({
           # MALA simulation, based on estimated parameters and time grid of observation
           
-          sim  <- simStateMALA(beta = beta, gamma2 = sigma2, 
-                               times = times, states = st, loc0 = c(tracks[ind[1],"mu.x"],tracks[ind[1],"mu.y"]), 
-                               cov_list = covs)
+          sim  <- simStateMALA(beta = beta, corr = corr, gamma2 = sigma2, 
+                                 times = times, states = st, loc0 = c(tracks[ind[1],"mu.x"],tracks[ind[1],"mu.y"]), 
+                                 cov_list = covs)
           
           # Acceptance rate
           rate <- sim$acc/(sim$acc+sim$rej)
@@ -563,6 +639,7 @@ malaSim <- function(model,UDinput,niter,globalStates=FALSE,sepStates=FALSE,ssl=T
   }
   return(allrates)
 }
+
 
 statePlot <- function(model,UD){
   
