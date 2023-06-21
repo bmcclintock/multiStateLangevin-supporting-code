@@ -63,17 +63,17 @@ stateNames <- c("encamped","exploratory")
 stateCols <- c("#56B4E9","#E69F00")
 
 # specify model
-DM <- list(mu=list(mean.x=~0+mu.x_tm1+langevin(grass.x)+langevin(bushgrass.x)+langevin(bush.x)+langevin(wood.x),
-                   mean.y=~0+mu.y_tm1+langevin(grass.y)+langevin(bushgrass.y)+langevin(bush.y)+langevin(wood.y),
+DM <- list(mu=list(mean.x=~0+mu.x_tm1+crw(mu.x_tm1)+langevin(grass.x)+langevin(bushgrass.x)+langevin(bush.x)+langevin(wood.x),
+                   mean.y=~0+mu.y_tm1+crw(mu.y_tm1)+langevin(grass.y)+langevin(bushgrass.y)+langevin(bush.y)+langevin(wood.y),
                    sd.x=~1,
                    sd.y=~1,
                    corr.xy=~1))
 
 # use fixPar argument to fix and constrain parameters
-fixPar <- list(mu=c(NA,1,2,3,4,NA,5,6,7,8,NA,1,2,3,4,NA,5,6,7,8,9,10,9,10,NA,NA))
+fixPar <- list(mu=c(NA,1,2,3,4,5,NA,6,7,8,9,10,NA,1,2,3,4,5,NA,6,7,8,9,10,11,12,11,12,NA,NA))
 
 zebraFit <- fitCTHMM(tracks,Time.name="date_time",nbStates=nbStates,dist=dist,DM=DM,formula=formula,
-                     Par0=list(mu=c(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-4,-2,-4,-2,0,0)),fixPar=fixPar,
+                     Par0=list(mu=c(1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,-4,-2,-4,-2,0,0)),fixPar=fixPar,
                      optMethod="TMB",control=list(silent=TRUE,trace=1),stateNames=stateNames,mvnCoords="mu")
 
 # plot pseudo-residuals
@@ -86,17 +86,17 @@ stpr <- plotStationary(zebraFit,plotCI=TRUE,col=stateCols,return=TRUE)
 st <- viterbi(zebraFit)
 
 # state 1 UD
-XB1 <- logUD1 <- grass * zebraFit$CIbeta$mu$est[2] + bushgrass * zebraFit$CIbeta$mu$est[3] + bush * zebraFit$CIbeta$mu$est[4] + wood * zebraFit$CIbeta$mu$est[5]
+XB1 <- logUD1 <- grass * zebraFit$CIbeta$mu$est[3] + bushgrass * zebraFit$CIbeta$mu$est[4] + bush * zebraFit$CIbeta$mu$est[5] + wood * zebraFit$CIbeta$mu$est[6]
 values(logUD1) <- getValues(XB1) - log(sum(Brobdingnag::brob(getValues(XB1)))) #normalize
 
 # state 2 UD
-XB2 <- logUD2 <- grass * zebraFit$CIbeta$mu$est[7] + bushgrass * zebraFit$CIbeta$mu$est[8] + bush * zebraFit$CIbeta$mu$est[9] + wood * zebraFit$CIbeta$mu$est[10]
+XB2 <- logUD2 <- grass * zebraFit$CIbeta$mu$est[9] + bushgrass * zebraFit$CIbeta$mu$est[10] + bush * zebraFit$CIbeta$mu$est[11] + wood * zebraFit$CIbeta$mu$est[12]
 values(logUD2) <- getValues(XB2) - log(sum(Brobdingnag::brob(getValues(XB2)))) #normalize
 
 par(mfrow=c(1,2))
-plot(logUD1,col=scico(palette="roma",256,direction=-1),main=stateNames[1],xlab="easting (km)",ylab="northing (km)")
+raster::plot(logUD1,col=scico(palette="roma",256,direction=-1),main=stateNames[1],xlab="easting (km)",ylab="northing (km)")
 points(zebraFit$data[,c("mu.x_tm1","mu.y_tm1")][which(st==1),],col=stateCols[1],pch=20)
-plot(logUD2,col=scico(palette="roma",256,direction=-1),main=stateNames[2],xlab="easting (km)")
+raster::plot(logUD2,col=scico(palette="roma",256,direction=-1),main=stateNames[2],xlab="easting (km)")
 points(zebraFit$data[,c("mu.x_tm1","mu.y_tm1")][which(st==2),],col=stateCols[2],pch=20)
 
 # mixture of both UDs based on time spent in each state
@@ -105,7 +105,7 @@ logUD <- log(tis$encamped*exp(logUD1) + tis$exploratory*exp(logUD2))
 plotSpatialCov(zebraFit,logUD,colors=scico(palette="roma",256,direction=-1),col=stateCols)
 
 # plot the habitat selection coefficients
-beta <- rbind(as.data.frame(lapply(zebraFit$CIbeta$mu,function(x) x[,2:5])),as.data.frame(lapply(zebraFit$CIbeta$mu,function(x) x[,7:10])))
+beta <- rbind(as.data.frame(lapply(zebraFit$CIbeta$mu,function(x) x[,3:6])),as.data.frame(lapply(zebraFit$CIbeta$mu,function(x) x[,9:12])))
 beta$cov <- c("grassland","bushed grassland","bushland","woodland")
 beta$state <- rep(stateNames,each=4)
 
@@ -121,8 +121,14 @@ hist(zebraFit$data$angle[which(st==1)],breaks=seq(-pi,pi,length=40),main="encamp
 hist(zebraFit$data$step[which(st==2)],breaks=seq(0,4.5,length=40),main="exploratory step lengths")
 hist(zebraFit$data$angle[which(st==2)],breaks=seq(-pi,pi,length=40),main="exploratory turn angles")
 
+par(mfrow=c(4,2))
+for(j in c("grass","bushgrass","bush","wood")){
+  hist(zebraFit$data[[j]][which(st==1)],breaks=seq(min(zebraFit$data[[j]]),max(zebraFit$data[[j]]),length=40),main=paste0("encamped: ",j))
+  hist(zebraFit$data[[j]][which(st==2)],breaks=seq(min(zebraFit$data[[j]]),max(zebraFit$data[[j]]),length=40),main=paste0("exploratory: ",j))
+}
+
 # MALA simulation
-mala <- malaSim(zebraFit,list(parIndex=list(c(2:5),c(7:10)),covNames=list(c("grass","bushgrass","bush","wood"),c("grass","bushgrass","bush","wood"))),niter=50,ssl=FALSE)
+mala <- malaSim(zebraFit,list(parIndex=list(c(3:6),c(9:12)),covNames=list(c("grass","bushgrass","bush","wood"),c("grass","bushgrass","bush","wood"))),niter=50,ssl=FALSE)
 apply(mala,2,mean)
 
 
