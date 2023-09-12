@@ -89,7 +89,7 @@ for(i in 1:length(DM)){
 # AIC excluding models with better fit but intermediary "foraging" state
 penAIC(append(list(fitLangevinOrig),fitLangevin[c(1:5,7,9,12,14)]))
 
-pdf("4stateUD.pdf",width=20,height=14)
+pdf("4stateUD.pdf",width=14,height=10)
 statePlot(fitLangevin[[9]],UD[[9]])
 dev.off()
 pdf("5stateUD.pdf",width=14,height=14)
@@ -142,10 +142,10 @@ slim <- apply(rbind(tracks[,c("mu.x","mu.y")],dplyr::bind_rows(sim)[,c("mu.x","m
 land <- (covlist0$depth*sd(covlist$depth[cellInd])+mean(covlist$depth[cellInd])-attr(covlist$depth,"absmin"))>=0
 
 cextheme <- theme(legend.text = element_text(size = rel(1.15)),legend.title=element_text(size=rel(1.35)),axis.title=element_text(size = rel(1.25)),axis.text=element_text(size = rel(1.15)))
-p1<-plotSpatialCov(tracks,crop(land,slim),colors=gray.colors(10, start = 1, end = 0.4, gamma = 2.2, alpha = NULL),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y="mu.y")+guides(fill = "none")+theme(panel.border = element_blank())+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
-p2<-plotSpatialCov(sim[[2]],crop(expandUD[[2]]$outbound,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("1 State")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
-p3<-plotSpatialCov(sim[[9]],crop(expandUD[[9]]$foraging,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(x="mu.x",y="mu.y")+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("4 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
-p4<-plotSpatialCov(sim[[14]],crop(expandUD[[14]]$foraging2,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(x="mu.x",y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("5 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
+p1<-plotSpatialCov(tracks,crop(land,slim),colors=gray.colors(10, start = 1, end = 0.4, gamma = 2.2, alpha = NULL),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = NULL,x=NULL,y="northing (km)")+guides(fill = "none")+theme(panel.border = element_blank())+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
+p2<-plotSpatialCov(sim[[2]],crop(expandUD[[2]]$outbound,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = expression("log"(pi)),x=NULL,y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("1 State")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
+p3<-plotSpatialCov(sim[[9]],crop(expandUD[[9]]$foraging,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = expression("log"(pi[2])),x="easting (km)",y="northing (km)")+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("4 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
+p4<-plotSpatialCov(sim[[14]],crop(expandUD[[14]]$foraging2,slim),colors=viridis_pal()(100),alpha=0.5,col=stateCols[[4]],return=TRUE)+ggplot2::labs(fill = expression("log"(pi[3])),x="easting (km)",y=NULL)+guides(col = "none",shape="none")+theme(panel.border = element_blank())  + ggtitle("5 States")+ theme(plot.title = element_text(size=14,hjust=0.5))+cextheme+coord_fixed(ratio = 1.25,xlim=c(NA,-1250),ylim=c(200,650))
 pdf("simTracks.pdf",width=14,height=14)
 plot(p1 + p2 + p3 + p4 + plot_layout(ncol = 2, nrow=2) )
 dev.off()

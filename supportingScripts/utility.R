@@ -649,14 +649,14 @@ statePlot <- function(model,UD){
   
   land <- (covlistCrop$depth*sd(covlist$depth[cellInd])+mean(covlist$depth[cellInd])-attr(covlist$depth,"absmin"))>=0
   
-  par(mfrow=c(nbStates-2,2), mar=c(0,0,3,1)+0.1)
+  par(mfrow=c(nbStates-2,2), mar=c(0,0,3,3)+0.1)
   raster::plot(land, col=gray.colors(10, start = 1, end = 0.4, gamma = 2.2, alpha = NULL), axes=FALSE, legend=FALSE,box=FALSE,bty="n")
   points(model$data$mu.x_tm1,model$data$mu.y_tm1,col=alpha(stateCols[[nbStates]][st],0.3),pch=20,cex=2)
   points(model$data$mu.x_tm1[which(st==nbStates)],model$data$mu.y_tm1[which(st==nbStates)],col=alpha(stateCols[[nbStates]][nbStates],0.4),pch=20,cex=2)
   segments(model$data$mu.x_tm1[-nrow(model$data)],model$data$mu.y_tm1[-nrow(model$data)],model$data$mu.x_tm1[-1],model$data$mu.y_tm1[-1],col=alpha(stateCols[[nbStates]][st],0.4),cex=2)
   legend(-1600,900,stateNames,col=stateCols[[nbStates]],pch=20,cex=2)
   for(i in 1:(nbStates-1)){
-    raster::plot(UD[[stateNames[i]]], col=viridis_pal()(100), axes = FALSE, main=stateNames[[i]], legend.mar=8, box=FALSE, cex.main=2.5,legend.width=2,axis.args=list(cex.axis=1.4))
+    raster::plot(UD[[stateNames[i]]], col=viridis_pal()(100), axes = FALSE, main=stateNames[[i]], legend.args = list(text = parse(text=(paste0("log(pi[",i,"])"))),cex=1.2), legend.mar=8, box=FALSE, cex.main=2.5,legend.width=3,axis.args=list(cex.axis=1.4))
     points(model$data$mu.x_tm1[which(st==i)],model$data$mu.y_tm1[which(st==i)],col=alpha(stateCols[[nbStates]][i],0.4),pch=20,cex=2)
   }
 }
