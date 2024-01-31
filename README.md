@@ -3,7 +3,7 @@ Supporting data and R code for "A multistate Langevin diffusion for inferring be
 ```
 install.packages("RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source")
 install.packages("RandomFields_3.3.14.tar.gz", repos = NULL, type = "source")
-remotes::install_github("papayoun/Rhabit")
+remotes::install_github("papayoun/Rhabit@31ddf44")
 ```
 The scripts also depend on [`momentuHMM`](https://doi.org/10.1111/2041-210X.12995) version 2.0.0 or higher:
 ```
