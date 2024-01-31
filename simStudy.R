@@ -12,7 +12,7 @@ if(!requireNamespace("RandomFieldsUtils",quietly=TRUE)){
 if(!requireNamespace("RandomFields",quietly=TRUE)){
   install.packages("RandomFields_3.3.14.tar.gz", repos = NULL, type = "source") # most recent archived version; required by Rhabit
 }
-remotes::install_github("papayoun/Rhabit",dependencies = TRUE)
+remotes::install_github("papayoun/Rhabit@31ddf44",dependencies = TRUE) # last commit before RandomFields was removed from dependencies
 library(Rhabit)
 if(!requireNamespace("momentuHMM",quietly=TRUE) || packageVersion("momentuHMM")<2){
   remotes::install_github("bmcclintock/momentuHMM@develop",dependencies = TRUE) # requires momentuHMM version >= 2.0.0
