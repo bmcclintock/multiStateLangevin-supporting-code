@@ -54,7 +54,7 @@ names(wood) <- "wood"
 covlist0 <- list(grass=grass,bushgrass=bushgrass,bush=bush,wood=wood)
 
 # prepare data for momentuHMM and calculate gradients
-tracks <- prepData(raw,covNames="tod",spatialCovs=covlist0,gradient=TRUE,altCoordNames="mu")
+tracks <- prepData(raw,CT=TRUE,Time.name="date_time",covNames="tod",spatialCovs=covlist0,gradient=TRUE,altCoordNames="mu")
 
 nbStates <- 2
 dist <- list(mu="rw_mvnorm2")
@@ -72,7 +72,7 @@ DM <- list(mu=list(mean.x=~0+mu.x_tm1+crw(mu.x_tm1)+langevin(grass.x)+langevin(b
 # use fixPar argument to fix and constrain parameters
 fixPar <- list(mu=c(NA,1,2,3,4,5,NA,6,7,8,9,10,NA,1,2,3,4,5,NA,6,7,8,9,10,11,12,11,12,NA,NA))
 
-zebraFit <- fitCTHMM(tracks,Time.name="date_time",nbStates=nbStates,dist=dist,DM=DM,formula=formula,
+zebraFit <- fitCTHMM(tracks,nbStates=nbStates,dist=dist,DM=DM,formula=formula,
                      Par0=list(mu=c(1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,-4,-2,-4,-2,0,0)),fixPar=fixPar,
                      optMethod="TMB",control=list(silent=TRUE,trace=1),stateNames=stateNames,mvnCoords="mu")
 
