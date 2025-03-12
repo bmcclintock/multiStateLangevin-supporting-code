@@ -3,14 +3,14 @@ library(ggplot2)
 library(scico)
 library(Brobdingnag)
 if(!requireNamespace("RandomFieldsUtils",quietly=TRUE)){
-  install.packages("RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source") # most recent archived version; required by RandomFields
+  install.packages("http://cran.r-project.org/src/contrib/Archive/RandomFieldsUtils/RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source") # most recent archived version; required by RandomFields
 }
 if(!requireNamespace("RandomFields",quietly=TRUE)){
-  install.packages("RandomFields_3.3.14.tar.gz", repos = NULL, type = "source") # most recent archived version; required by Rhabit
+  install.packages("http://cran.r-project.org/src/contrib/Archive/RandomFields/RandomFields_3.3.14.tar.gz", repos = NULL, type = "source") # most recent archived version; required by Rhabit
 }
-remotes::install_github("papayoun/Rhabit",dependencies = TRUE)
+remotes::install_github("papayoun/Rhabit@31ddf44",dependencies = TRUE) # last commit before RandomFields was removed from dependencies
 library(Rhabit)
-if(!requireNamespace("momentuHMM",quietly=TRUE) || packageVersion("momentuHMM")<2){
+if(!requireNamespace("momentuHMM",quietly=TRUE) || as.numeric(substr(packageVersion("momentuHMM"),1,1))<2){
   remotes::install_github("bmcclintock/momentuHMM@develop",dependencies = TRUE) # requires momentuHMM version >= 2.0.0
 }
 library(momentuHMM)
