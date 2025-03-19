@@ -1,5 +1,4 @@
 library(tidyverse)
-library(rgdal)
 library(terra)
 library(sf)
 library(sp)
@@ -11,14 +10,14 @@ library(scales)
 library(ggplot2)
 library(patchwork)
 if(!requireNamespace("RandomFieldsUtils",quietly=TRUE)){
-  install.packages("RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source") # most recent archived version; required by RandomFields
+  install.packages("http://cran.r-project.org/src/contrib/Archive/RandomFieldsUtils/RandomFieldsUtils_1.2.5.tar.gz", repos = NULL, type = "source") # most recent archived version; required by RandomFields
 }
 if(!requireNamespace("RandomFields",quietly=TRUE)){
-  install.packages("RandomFields_3.3.14.tar.gz", repos = NULL, type = "source") # most recent archived version; required by Rhabit
+  install.packages("http://cran.r-project.org/src/contrib/Archive/RandomFields/RandomFields_3.3.14.tar.gz", repos = NULL, type = "source") # most recent archived version; required by Rhabit
 }
-remotes::install_github("papayoun/Rhabit",dependencies = TRUE)
+remotes::install_github("papayoun/Rhabit@31ddf44",dependencies = TRUE) # last commit before RandomFields was removed from dependencies
 library(Rhabit)
-if(!requireNamespace("momentuHMM",quietly=TRUE) || packageVersion("momentuHMM")<2){
+if(!requireNamespace("momentuHMM",quietly=TRUE) || as.numeric(substr(packageVersion("momentuHMM"),1,1))<2){
   remotes::install_github("bmcclintock/momentuHMM@develop",dependencies = TRUE) # requires momentuHMM version >= 2.0.0
 }
 library(momentuHMM)
@@ -42,7 +41,7 @@ for(i in names(covlist)){
 covlistCrop <- lapply(covlist0,function(x) raster::crop(x,extent(-2247.282,-1212.282,198.0775,918.0775)))
 
 # prepare data for momentuHMM and calculate gradients
-tracks <- prepData(tracks,coordNames=c("mu.x","mu.y"),altCoordNames = "mu",spatialCovs=covlist0,gradient=TRUE)
+tracks <- prepData(tracks,CT=TRUE,Time.name="date_time",Time.unit="hours",coordNames=c("mu.x","mu.y"),altCoordNames = "mu",spatialCovs=covlist0,gradient=TRUE)
 tracks$intercept <- 1
 
 # define data stream distribution
@@ -53,7 +52,7 @@ source("supportingScripts/DM.R") # model definitions
 fitLangevin <- UD <- list()
 
 # original single-state model of Michelot et al. (2019)
-fitLangevinOrig <- fitCTHMM(tracks,Time.name="date_time",Time.unit="hours",dist=dist,nbStates=1,
+fitLangevinOrig <- fitCTHMM(tracks,dist=dist,nbStates=1,
                             DM=list(mu = list(mean.x=~mu.x_tm1+langevin(depth.x)+langevin(slope.x)+langevin(d2site.x),
                                               mean.y=~mu.y_tm1+langevin(depth.y)+langevin(slope.y)+langevin(d2site.y),
                                               sd.x=~1,
@@ -72,7 +71,7 @@ UDO <- plotUD(nbUD=1,parIndex=list(2:4),covNames=list(c("depth","slope","d2site"
 # fit models with additional states and covariates defined in `DM.R`
 for(i in 1:length(DM)){
   message("\n",modelName[[i]])
-  fitLangevin[[i]]<- fitCTHMM(tracks,Time.name="date_time",Time.unit="hours",dist=dist,nbStates=nbStates[[i]],DM=DM[[i]],
+  fitLangevin[[i]]<- fitCTHMM(tracks,dist=dist,nbStates=nbStates[[i]],DM=DM[[i]],
                                Par0=Par[[i]]$Par,
                                beta0=Par[[i]]$beta,
                                delta0=Par[[i]]$delta,
@@ -133,8 +132,8 @@ sim <- expandUD <- list()
 initPos <- mapply(function(x) c(tracks[which(tracks$ID==x)[1],c("mu.x")],tracks[which(tracks$ID==x)[1],c("mu.y")]),unique(tracks$ID),SIMPLIFY = FALSE)
 for(i in c(2,9,14)){
   message("\n",modelName[[i]])
-  set.seed(719647,kind="Mersenne-Twister",normal.kind = "Inversion")
-  sim[[i]] <- simCTHMM(model=fitLangevin[[i]],spatialCovs=covlist0,initialPosition=initPos,states=TRUE,retrySims=5)
+  set.seed(1,kind="Mersenne-Twister",normal.kind = "Inversion")
+  sim[[i]] <- simCTHMM(model=fitLangevin[[i]],matchModelObs=TRUE,spatialCovs=covlist0,initialPosition=initPos,states=TRUE,retrySims=5)
   expandUD[[i]] <- plotUD(inputUD[[i]]$nbUD,inputUD[[i]]$parIndex,inputUD[[i]]$covNames,model=fitLangevin[[i]],inputUD[[i]]$UDnames,inputUD[[i]]$UDstates,inputUD[[i]]$sign,cropRast=FALSE,return=TRUE)
 }
 slim <- apply(rbind(tracks[,c("mu.x","mu.y")],dplyr::bind_rows(sim)[,c("mu.x","mu.y")]),2,range)+c(-100,100,-50,50)
